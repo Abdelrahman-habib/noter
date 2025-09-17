@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  # Development overrides for MySQL
+  mysql:
+    ports:
+      - "3307:3306" # Different port to avoid conflicts with local MySQL
+    environment:
+      MYSQL_ROOT_PASSWORD: devpassword
+      MYSQL_DATABASE: snippetbox_dev
+      MYSQL_USER: dev_user
+      MYSQL_PASSWORD: dev123
+
+  # Development migration service
+  migrate:
+    environment:
+      GOOSE_DRIVER: mysql
+      GOOSE_DBSTRING: dev_user:dev123@tcp(mysql:3306)/snippetbox_dev
+
+  # Development migration service
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+
+  # Development web service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      HOST: "0.0.0.0"
+      PORT: 4444
+      DB_DSN: "dev_user:dev123@tcp(mysql:3306)/snippetbox_dev"
+      ENVIROMENT: "development"
+      DEBUG: "true"
+      TLS_CERT: "./tls/cert.pem"
+      TLS_KEY: "./tls/key.pem"
+    volumes:
+      # Mount source code for development (enables live reload)
+      - .:/app
+      - go_mod_cache:/go/pkg/mod
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Building application...' &&
+        go build -o bin/snippetbox ./cmd/web &&
+        echo 'Starting application...' &&
+        ./bin/snippetbox 
+        -addr=0.0.0.0:4444 
+        -env=development 
+        -dsn='dev_user:dev123@tcp(mysql:3306)/snippetbox_dev' 
+        -tls-cert='./tls/cert.pem' 
+        -tls-key='./tls/key.pem' 
+        -debug
+      "
+
+  # Development tools service for running linting, testing, etc.
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: snippetbox-tools
+    volumes:
+      - .:/app
+      - go_mod_cache:/go/pkg/mod
+    working_dir: /app
+    profiles:
+      - tools
+    command: ["tail", "-f", "/dev/null"]  # Keep container running
+
+volumes:
+  go_mod_cache:
+    driver: local

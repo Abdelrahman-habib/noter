@@ -1,0 +1,100 @@
+version: "3.8"
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: snippetbox-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: snippetbox
+      MYSQL_USER: snippetbox
+      MYSQL_PASSWORD: snippetbox123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/schema/migrations:/docker-entrypoint-initdb.d/migrations:ro
+    networks:
+      - snippetbox-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Database Migration Service
+  migrate:
+    build: .
+    container_name: snippetbox-migrate
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      GOOSE_DRIVER: mysql
+      GOOSE_DBSTRING: snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox
+    networks:
+      - snippetbox-network
+    command: >
+      sh -c "
+        echo 'Waiting for MySQL to be ready...' &&
+        sleep 10 &&
+        echo 'Running migrations...' &&
+        goose -dir db/schema/migrations mysql 'snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox' up &&
+        echo 'Running seed data...' &&
+        goose -dir db/schema/seed -no-versioning mysql 'snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox' up &&
+        echo 'Database setup complete!'
+      "
+    restart: "no"
+
+  # Snippetbox Web Application
+  web:
+    build: .
+    container_name: snippetbox-web
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      HOST: "0.0.0.0"
+      PORT: 4444
+      DB_DSN: "snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox"
+      ENVIROMENT: "production"
+      DEBUG: "false"
+      TLS_CERT: "./tls/cert.pem"
+      TLS_KEY: "./tls/key.pem"
+    ports:
+      - "4444:4444"
+    networks:
+      - snippetbox-network
+    command: >
+      ./snippetbox 
+      -addr=0.0.0.0:4444 
+      -env=production 
+      -dsn='snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox' 
+      -tls-cert='./tls/cert.pem' 
+      -tls-key='./tls/key.pem'
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "https://localhost:4444/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  snippetbox-network:
+    driver: bridge

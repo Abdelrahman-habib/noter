@@ -1,0 +1,19 @@
+{{define "title"}}{{if .SnippetsFilters}}My Snippets{{else}}All Snippets{{end}}{{end}} 
+
+{{define "main"}}
+    <h2 class="flex justify-between items-start">
+        {{if .SnippetsFilters}}My Snippets{{else}}All Snippets{{end}}
+        <div class="flex justify-between items-center gap">
+            <a {{if eq .CurrentPage 1}}disabled{{else}}href='/{{if .SnippetsFilters}}my-{{end}}snippets?page={{sub .CurrentPage 1}}'{{end}}>Previous</a>
+            <a {{if .HasNext}}href='/{{if .SnippetsFilters}}my-{{end}}snippets?page={{add .CurrentPage 1}}'{{else}}disabled{{end}}>Next</a>
+        </div>
+    </h2>
+    {{if .SnippetsFilters}}
+        <div class="filters">
+            <a href='/my-snippets?show=all' {{if boolPtrIsNil .SnippetsFilters.ShowPublic}}class="active"{{end}}>All</a>
+            <a href='/my-snippets?show=public' {{if boolPtrIsTrue .SnippetsFilters.ShowPublic}}class="active"{{end}}>🌐 Public</a>
+            <a href='/my-snippets?show=private' {{if boolPtrIsFalse .SnippetsFilters.ShowPublic}}class="active"{{end}}>🔒 Private</a>
+        </div>
+    {{end}}
+    {{template "snippets-grid" .}} 
+{{end}}

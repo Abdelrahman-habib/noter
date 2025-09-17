@@ -1,0 +1,23 @@
+{{define "dialog"}}
+<form method="POST" action="{{block "dialog-action" .}}#{{end}}">
+<div class="dialog-overlay" id="dialog-overlay">
+    <div class="dialog" id="dialog">
+        <div class="dialog-header">
+            <h2>{{block "dialog-title" .}}Confirmation{{end}}</h2>
+            <button class="button dialog-close-button" type="button">X</button>
+        </div>
+        <div class="dialog-content">
+            {{block "dialog-content" .}}
+             <p>Are you sure you want to this action? This action cannot be undone.</p>
+            {{end}}
+        </div>
+        {{block "dialog-footer" .}}
+        <div class="dialog-footer">
+            <button class="button dialog-close-button" type="button">{{block "dialog-close-text" .}}Cancel{{end}}</button>
+            <button class="button button-secondary" type="submit">{{block "dialog-submit-text" .}}Submit{{end}}</button>
+        </div>
+        {{end}}
+    </div>
+</div>
+</form>
+{{end}}

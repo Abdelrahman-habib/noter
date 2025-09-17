@@ -1,0 +1,41 @@
+{{define "title"}}{{if ne .Form.ID ""}}Edit{{else}}Create{{end}} Snippet{{end}}
+{{define "main"}}
+<form action='/snippet/create' method='POST'>
+    <input type='hidden' name='csrf_token' value='{{.CSRFToken}}'>
+    <input type='hidden' name='id' value='{{.Form.ID}}'>
+    <div>
+        <label>Title:</label>
+        {{with .Form.FieldsErrors.title}}
+            <label class='error'>{{.}}</label>
+        {{end}}
+        <input type='text' name='title' value='{{.Form.Title}}'>
+    </div>
+    <div>
+        <label>Content:</label>
+        {{with .Form.FieldsErrors.content}}
+            <label class='error'>{{.}}</label>
+        {{end}}
+        <textarea name='content'>{{.Form.Content}}</textarea>
+    </div>
+    <div>
+        <label>Delete in:</label>
+        {{with .Form.FieldsErrors.expires}}
+            <label class='error'>{{.}}</label>
+        {{end}}
+        <input type='radio' name='expires' value='365' {{if (eq .Form.Expires 365)}}checked{{end}}> One Year
+        <input type='radio' name='expires' value='7' {{if (eq .Form.Expires 7)}}checked{{end}}> One Week
+        <input type='radio' name='expires' value='1' {{if (eq .Form.Expires 1)}}checked{{end}}> One Day
+    </div>
+    <div>
+        <label>Visibility:</label>
+        {{with .Form.FieldsErrors.visibility}}
+            <label class='error'>{{.}}</label>
+        {{end}}
+        <input type='radio' name='visibility' value='public' {{if (eq .Form.Visibility "public")}}checked{{end}}> Public
+        <input type='radio' name='visibility' value='private' {{if (eq .Form.Visibility "private")}}checked{{end}}> Private
+    </div>
+    <div>
+        <input type='submit' value='{{if ne .Form.ID ""}}Update snippet{{else}}Publish snippet{{end}}'>
+    </div>
+</form>
+{{end}}
