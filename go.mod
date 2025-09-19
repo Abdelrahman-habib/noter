@@ -1,6 +1,6 @@
 module github.com/Abdelrahman-habib/noter
 
-go 1.25.1
+go 1.25.0
 
 require (
 	github.com/alexedwards/scs/mysqlstore v0.0.0-20250417082927-ab20b3feb5e9
