@@ -36,7 +36,7 @@ func parseFlags() *config {
 	tlsCert := flag.String("tls-cert", "./tls/cert.pem", "Path to TLS certificate file")
 	tlsKey := flag.String("tls-key", "./tls/key.pem", "Path to TLS key file")
 
-	dsn := flag.String("dsn", "web:pass@/snippetbox?parseTime=true", "MySQL data source name")
+	dsn := flag.String("dsn", "noter_web:pass@/noter?parseTime=true", "MySQL data source name")
 
 	flag.Parse()
 

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Abdelrahman-habib/snippetbox/internal/models/mocks"
+	"github.com/Abdelrahman-habib/noter/internal/models/mocks"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 )
@@ -35,7 +35,7 @@ func newTestApplication(t *testing.T) *application {
 
 	return &application{
 		logger:         slog.New(slog.DiscardHandler),
-		snippets:       &mocks.SnippetModel{},
+		notes:          &mocks.NoteModel{},
 		users:          &mocks.UserModel{},
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,

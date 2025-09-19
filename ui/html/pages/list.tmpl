@@ -1,19 +1,19 @@
-{{define "title"}}{{if .SnippetsFilters}}My Snippets{{else}}All Snippets{{end}}{{end}} 
+{{define "title"}}{{if .NotesFilters}}My Notes{{else}}All Notes{{end}}{{end}} 
 
 {{define "main"}}
     <h2 class="flex justify-between items-start">
-        {{if .SnippetsFilters}}My Snippets{{else}}All Snippets{{end}}
+        {{if .NotesFilters}}My Notes{{else}}All Notes{{end}}
         <div class="flex justify-between items-center gap">
-            <a {{if eq .CurrentPage 1}}disabled{{else}}href='/{{if .SnippetsFilters}}my-{{end}}snippets?page={{sub .CurrentPage 1}}'{{end}}>Previous</a>
-            <a {{if .HasNext}}href='/{{if .SnippetsFilters}}my-{{end}}snippets?page={{add .CurrentPage 1}}'{{else}}disabled{{end}}>Next</a>
+            <a {{if eq .CurrentPage 1}}disabled{{else}}href='/{{if .NotesFilters}}my-{{end}}notes?page={{sub .CurrentPage 1}}'{{end}}>Previous</a>
+            <a {{if .HasNext}}href='/{{if .NotesFilters}}my-{{end}}notes?page={{add .CurrentPage 1}}'{{else}}disabled{{end}}>Next</a>
         </div>
     </h2>
-    {{if .SnippetsFilters}}
+    {{if .NotesFilters}}
         <div class="filters">
-            <a href='/my-snippets?show=all' {{if boolPtrIsNil .SnippetsFilters.ShowPublic}}class="active"{{end}}>All</a>
-            <a href='/my-snippets?show=public' {{if boolPtrIsTrue .SnippetsFilters.ShowPublic}}class="active"{{end}}>🌐 Public</a>
-            <a href='/my-snippets?show=private' {{if boolPtrIsFalse .SnippetsFilters.ShowPublic}}class="active"{{end}}>🔒 Private</a>
+            <a href='/my-notes?show=all' {{if boolPtrIsNil .NotesFilters.ShowPublic}}class="active"{{end}}>All</a>
+            <a href='/my-notes?show=public' {{if boolPtrIsTrue .NotesFilters.ShowPublic}}class="active"{{end}}>🌐 Public</a>
+            <a href='/my-notes?show=private' {{if boolPtrIsFalse .NotesFilters.ShowPublic}}class="active"{{end}}>🔒 Private</a>
         </div>
     {{end}}
-    {{template "snippets-grid" .}} 
+    {{template "notes-grid" .}} 
 {{end}}

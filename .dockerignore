@@ -8,7 +8,8 @@ README.md
 
 # Environment files
 .env*
-!.env.example
+*.env
+!env.template
 
 # Build artifacts
 bin/
@@ -37,6 +38,7 @@ Thumbs.db
 Dockerfile*
 docker-compose*.yml
 .dockerignore
+docker-run.sh
 
 # Logs
 *.log
@@ -54,3 +56,37 @@ node_modules/
 
 # Kiro files
 .kiro/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# TLS certificates (copied into image for development, mounted as volume for production)
+
+# Go specific
+go.work
+go.work.sum
+
+# Development tools
+air.toml
+.golangci.yml
+
+# Local configuration
+config.local.*
+
+# Backup files
+*.bak
+*.backup
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Cache directories
+.cache/
+cache/
+
+# Runtime files
+*.pid
+*.sock

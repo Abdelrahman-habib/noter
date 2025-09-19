@@ -2,8 +2,8 @@
 
 {{define "main"}}
     <h2 class="flex justify-between items-start">
-        Latest Snippets
-        {{if .Snippets}}<a href='/snippets?page=1'>View more</a>{{end}}
+        Latest Notes
+        {{if .Notes}}<a href='/notes?page=1'>View more</a>{{end}}
     </h2>
-    {{template "snippets-grid" .}} 
+    {{template "notes-grid" .}} 
 {{end}}

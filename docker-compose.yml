@@ -1,23 +1,18 @@
-version: "3.8"
-
 services:
   # MySQL Database
   mysql:
     image: mysql:8.0
-    container_name: snippetbox-mysql
+    container_name: noter-mysql
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: snippetbox
-      MYSQL_USER: snippetbox
-      MYSQL_PASSWORD: snippetbox123
     ports:
-      - "3306:3306"
+      - "3307:3306" # Development port (to avoid conflicts with local MySQL)
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-dev_root_password_change_me}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./db/schema/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     networks:
-      - snippetbox-network
+      - noter-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
@@ -26,75 +21,92 @@ services:
   # Database Migration Service
   migrate:
     build: .
-    container_name: snippetbox-migrate
+    container_name: noter-migrate
     depends_on:
       mysql:
         condition: service_healthy
     environment:
-      GOOSE_DRIVER: mysql
-      GOOSE_DBSTRING: snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox
+      GOOSE_DRIVER: ${GOOSE_DRIVER:-mysql}
+      GOOSE_DBSTRING: ${GOOSE_DBSTRING:-noter_admin:admin@tcp(mysql:3306)/noter}
+      GOOSE_MIGRATION_DIR: ${GOOSE_MIGRATION_DIR:-./db/schema/migrations}
+      GOOSE_SEED_DIR: ${GOOSE_SEED_DIR:-./db/schema/seed}
+      GOOSE_TABLE: ${GOOSE_TABLE:-noter.goose_migrations}
     networks:
-      - snippetbox-network
+      - noter-network
     command: >
       sh -c "
         echo 'Waiting for MySQL to be ready...' &&
-        sleep 10 &&
+        sleep 5 &&
         echo 'Running migrations...' &&
-        goose -dir db/schema/migrations mysql 'snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox' up &&
+        goose -dir db/schema/migrations up &&
         echo 'Running seed data...' &&
-        goose -dir db/schema/seed -no-versioning mysql 'snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox' up &&
+        goose -dir db/schema/seed -no-versioning up &&
         echo 'Database setup complete!'
       "
     restart: "no"
+    profiles:
+      - migrate
 
-  # Snippetbox Web Application
+  # Web Application
   web:
     build: .
-    container_name: snippetbox-web
+    container_name: noter-web
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     environment:
       HOST: "0.0.0.0"
       PORT: 4444
-      DB_DSN: "snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox"
-      ENVIROMENT: "production"
-      DEBUG: "false"
-      TLS_CERT: "./tls/cert.pem"
-      TLS_KEY: "./tls/key.pem"
+      DB_DSN: ${DB_DSN:-noter_web:pass@tcp(mysql:3306)/noter}
+      ENVIROMENT: ${ENVIROMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      TLS_CERT: ${TLS_CERT:-./tls/cert.pem}
+      TLS_KEY: ${TLS_KEY:-./tls/key.pem}
     ports:
       - "4444:4444"
+    volumes:
+      # Mount source code for development (enables live reload)
+      - .:/app
+    working_dir: /app
     networks:
-      - snippetbox-network
-    command: >
-      ./snippetbox 
-      -addr=0.0.0.0:4444 
-      -env=production 
-      -dsn='snippetbox:snippetbox123@tcp(mysql:3306)/snippetbox' 
-      -tls-cert='./tls/cert.pem' 
-      -tls-key='./tls/key.pem'
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "https://localhost:4444/",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - noter-network
+    entrypoint: ["./entrypoint.sh"]
+    command:
+      [
+        "-addr",
+        "0.0.0.0:4444",
+        "-env",
+        "${ENVIROMENT:-development}",
+        "-dsn",
+        "${DB_DSN:-noter_web:pass@tcp(mysql:3306)/noter}",
+        "-tls-cert",
+        "${TLS_CERT:-./tls/cert.pem}",
+        "-tls-key",
+        "${TLS_KEY:-./tls/key.pem}",
+        "-debug",
+      ]
+
+  # Development tools service for running linting, testing, etc.
+  tools:
+    build: .
+    container_name: noter-tools
+    volumes:
+      - .:/app
+      - go_mod_cache:/go/pkg/mod
+    working_dir: /app
+    networks:
+      - noter-network
+    profiles:
+      - tools
+    command: ["tail", "-f", "/dev/null"] # Keep container running
 
 volumes:
+  go_mod_cache:
+    driver: local
   mysql_data:
     driver: local
 
 networks:
-  snippetbox-network:
+  noter-network:
     driver: bridge

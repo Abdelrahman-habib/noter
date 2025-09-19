@@ -1,18 +1,18 @@
-{{define "snippets-grid"}}
-    {{if .Snippets}}
-    <div class="snippets-grid">
-        {{range .Snippets}}
-        <a href='/snippet/view/{{.ID}}' class="snippet-card">
-            <div class="snippet-card-content">
-                <p class="snippet-preview">{{truncate .Content 150}}</p>
+{{define "notes-grid"}}
+    {{if .Notes}}
+    <div class="notes-grid">
+        {{range .Notes}}
+        <a href='/note/view/{{.ID}}' class="note-card">
+            <div class="note-card-content">
+                <p class="note-preview">{{truncate .Content 150}}</p>
             </div>
-            <div class="snippet-card-footer">
+            <div class="note-card-footer">
                 <h3>
-                    <abbr title="{{if .Public}}Public{{else}}Private{{end}}" class="snippet-visibility">{{if .Public}}🌐{{else}}🔒{{end}}</abbr> {{.Title}}
+                    <abbr title="{{if .Public}}Public{{else}}Private{{end}}" class="note-visibility">{{if .Public}}🌐{{else}}🔒{{end}}</abbr> {{.Title}}
                 </h3>
                 <div class="flex justify-between items-center w-full">
-                    <span class="snippet-date">{{.Created | humanDate}}</span>
-                    <span title="{{.Username}}" class="snippet-id">{{truncate .Username 15}}</span>
+                    <span class="note-date">{{.Created | humanDate}}</span>
+                    <span title="{{.Username}}" class="note-id">{{truncate .Username 15}}</span>
                 </div>
             </div>
         </a>

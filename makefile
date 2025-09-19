@@ -87,7 +87,7 @@ teardown-test-db:
 	@$(MAKE) migrate-test-reset
 
 build:
-	go build -o bin/snippetbox ./cmd/web
+	go build -o bin/noter ./cmd/web
 
 build-dev:
 	@$(MAKE) build ENV=development
@@ -102,7 +102,7 @@ build-all:
 	make build-dev && make build-prod && make build-test
 
 clean:
-	rm -f bin/snippetbox
+	rm -f bin/noter
 
 test:
 	go test ./...

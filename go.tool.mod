@@ -1,4 +1,4 @@
-module github.com/Abdelrahman-habib/snippetbox
+module github.com/Abdelrahman-habib/noter
 
 go 1.25.1
 

@@ -10,13 +10,13 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 
-	"github.com/Abdelrahman-habib/snippetbox/internal/models"
+	"github.com/Abdelrahman-habib/noter/internal/models"
 )
 
 type application struct {
 	logger         *slog.Logger
 	config         *config
-	snippets       models.SnippetModelInterface
+	notes          models.NoteModelInterface
 	users          models.UserModelInterface
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder

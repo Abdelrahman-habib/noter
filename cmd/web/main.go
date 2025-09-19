@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Abdelrahman-habib/snippetbox/internal/logger"
-	"github.com/Abdelrahman-habib/snippetbox/internal/models"
+	"github.com/Abdelrahman-habib/noter/internal/logger"
+	"github.com/Abdelrahman-habib/noter/internal/models"
 	"github.com/alexedwards/scs/mysqlstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
@@ -41,7 +41,7 @@ func main() {
 		logger:         logger,
 		config:         config,
 		templateCache:  templateCache,
-		snippets:       &models.SnippetModel{DB: db},
+		notes:          &models.NoteModel{DB: db},
 		users:          &models.UserModel{DB: db},
 		formDecoder:    form.NewDecoder(),
 		sessionManager: sessionManager,

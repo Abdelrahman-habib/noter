@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	schema "github.com/Abdelrahman-habib/snippetbox/db/schema"
+	schema "github.com/Abdelrahman-habib/noter/db/schema"
 	"github.com/pressly/goose/v3"
 )
 

@@ -6,18 +6,18 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Abdelrahman-habib/snippetbox/internal/models"
-	"github.com/Abdelrahman-habib/snippetbox/ui"
+	"github.com/Abdelrahman-habib/noter/internal/models"
+	"github.com/Abdelrahman-habib/noter/ui"
 )
 
 // Define a templateData type to act as the holding structure for
 // any dynamic data that we want to pass to our HTML templates.
 type templateData struct {
 	CurrentYear     int
-	Snippet         models.SnippetWithUsername
-	Snippets        []models.SnippetWithUsername
-	IsUserSnippet   bool
-	SnippetsFilters *models.SnippetsFilters
+	Note            models.NoteWithUsername
+	Notes           []models.NoteWithUsername
+	IsUserNote      bool
+	NotesFilters    *models.NotesFilters
 	User            models.User
 	Form            any
 	Flash           string

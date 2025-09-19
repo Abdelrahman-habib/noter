@@ -1,6 +1,6 @@
-{{define "title"}}{{if ne .Form.ID ""}}Edit{{else}}Create{{end}} Snippet{{end}}
+{{define "title"}}{{if ne .Form.ID ""}}Edit{{else}}Create{{end}} Notes{{end}}
 {{define "main"}}
-<form action='/snippet/create' method='POST'>
+<form action='/note/create' method='POST'>
     <input type='hidden' name='csrf_token' value='{{.CSRFToken}}'>
     <input type='hidden' name='id' value='{{.Form.ID}}'>
     <div>
@@ -35,7 +35,7 @@
         <input type='radio' name='visibility' value='private' {{if (eq .Form.Visibility "private")}}checked{{end}}> Private
     </div>
     <div>
-        <input type='submit' value='{{if ne .Form.ID ""}}Update snippet{{else}}Publish snippet{{end}}'>
+        <input type='submit' value='{{if ne .Form.ID ""}}Update Note{{else}}Publish Note{{end}}'>
     </div>
 </form>
 {{end}}

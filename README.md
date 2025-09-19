@@ -1,10 +1,10 @@
-# Snippetbox
+# Noter
 
-A secure web application for sharing code snippets, built with Go and MySQL. Features user authentication, session management, and HTTPS support.
+A secure web application for sharing Notes, Qoutes, and any text in general, built with Go and MySQL. Features user authentication, session management, and HTTPS support.
 
 ## Features
 
-- 📝 Create and share code snippets
+- 📝 Create and share text notes
 - 🔐 User registration and authentication
 - 🍪 Secure session management with MySQL store
 - 🔒 CSRF protection and bcrypt password hashing
@@ -35,23 +35,216 @@ A secure web application for sharing code snippets, built with Go and MySQL. Fea
 
    ```bash
    git clone <repository-url>
-   cd snippetbox
+   cd noter
    ```
 
 2. **Start development environment**
 
    ```bash
-   ./docker-run.sh up-dev
+   ./docker-run.sh dev
    ```
 
-3. **Access the application**
+3. **Run database migrations** (first time only)
+
+   ```bash
+   ./docker-run.sh migrate
+   ```
+
+4. **Access the application**
    - Open https://localhost:4444 in your browser
    - Accept the self-signed certificate warning for development
+   - MySQL is available on localhost:3307
 
 ### Production Deployment
 
 ```bash
-./docker-run.sh up
+./docker-run.sh prod
+```
+
+## Docker Setup Details
+
+### Architecture
+
+The Docker setup uses a multi-container architecture:
+
+- **MySQL Container**: Database server with automatic initialization
+- **Web Container**: Go application with live reload for development
+- **Migration Container**: Runs Goose migrations (on-demand)
+
+### Services
+
+#### MySQL Service (`noter-mysql`)
+
+- **Image**: `mysql:8.0`
+- **Port**: `3307:3306` (mapped to avoid conflicts with local MySQL)
+- **Data**: Persistent volume `mysql_data`
+- **Initialization**: Automatically creates databases and users via `db/init/`
+- **Health Check**: Ensures MySQL is ready before other services start
+
+#### Web Service (`noter-web`)
+
+- **Build**: Custom Go application image
+- **Port**: `4444:4444` (HTTPS)
+- **Volumes**:
+  - Source code mounted for live reload
+  - Go module cache for faster builds
+- **Dependencies**: Waits for MySQL to be healthy
+- **Environment**: Configurable via environment variables
+
+#### Migration Service (`noter-migrate`)
+
+- **Profile**: `migrate` (runs on-demand)
+- **Purpose**: Runs Goose migrations and seed data
+- **Dependencies**: Waits for MySQL to be healthy
+- **Command**: `goose -dir db/schema/migrations up && goose -dir db/schema/seed -no-versioning up`
+
+### Database Initialization
+
+The MySQL container automatically initializes with:
+
+1. **Database Creation**: `noter` and `noter_test` databases
+2. **User Creation**: Three users with appropriate permissions:
+   - `noter_admin`: Full privileges on `noter` database (for migrations)
+   - `noter_web`: Limited privileges on `noter` database (for application)
+   - `noter_test_web`: Full privileges on `noter_test` database (for tests)
+3. **Migration Execution**: Goose runs migrations to create tables
+4. **Seed Data**: Sample data inserted for development
+
+### Environment Configuration
+
+#### Development Environment (`dev.env`)
+
+```env
+# Server Configuration
+HOST=localhost
+PORT=4000
+ENVIROMENT=development
+
+# Database Configuration
+GOOSE_DRIVER=mysql
+GOOSE_DBSTRING=noter_admin:admin@tcp(mysql:3306)/noter
+GOOSE_MIGRATION_DIR=./db/schema/migrations
+GOOSE_SEED_DIR=./db/schema/seed
+GOOSE_TABLE=noter.goose_migrations
+DB_DSN=noter_web:pass@tcp(mysql:3306)/noter
+TEST_DB_DSN=noter_test_web:test_pass@tcp(mysql:3306)/noter_test
+
+# Application Settings
+DEBUG=true
+LOG_LEVEL=debug
+TLS_CERT=./tls/cert.pem
+TLS_KEY=./tls/key.pem
+
+# Docker-specific configuration
+MYSQL_ROOT_PASSWORD=dev_root_password_change_me
+```
+
+#### Security Considerations
+
+- **MySQL Root Password**: Configurable via `MYSQL_ROOT_PASSWORD` environment variable
+- **Default Password**: `dev_root_password_change_me` (change for production)
+- **Database Users**: Separate users with minimal required permissions
+- **Network Isolation**: All services run in isolated Docker network
+
+### Docker Commands
+
+#### Service Management
+
+```bash
+# Start development environment
+./docker-run.sh dev
+
+# Start production environment
+./docker-run.sh prod
+
+# Stop all services
+./docker-run.sh down
+
+# View service status
+docker-compose ps
+```
+
+#### Database Management
+
+```bash
+# Run migrations
+./docker-run.sh migrate          # Run migrations (dev)
+./docker-run.sh migrate-dev      # Run migrations (dev)
+./docker-run.sh migrate-prod     # Run migrations (prod)
+
+# Migration operations
+./docker-run.sh migrate-up       # Run migrations up (dev)
+./docker-run.sh migrate-down     # Rollback migrations (dev)
+./docker-run.sh migrate-reset    # Reset all migrations (dev)
+./docker-run.sh migrate-status   # Check migration status (dev)
+
+# Database access
+./docker-run.sh db-shell         # Access MySQL shell
+./docker-run.sh logs-db          # View database logs
+```
+
+#### Development Tools
+
+```bash
+# Run tests
+./docker-run.sh test
+
+# Run linting
+./docker-run.sh lint
+
+# Run security audit
+./docker-run.sh audit
+
+# Access tools container
+./docker-run.sh tools
+```
+
+#### Debugging
+
+```bash
+# View application logs
+./docker-run.sh logs-web
+
+# Access application container
+./docker-run.sh shell
+
+# Clean up everything
+./docker-run.sh clean
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Port Conflicts**
+
+   - MySQL uses port 3307 to avoid conflicts with local MySQL
+   - Web app uses port 4444 for HTTPS
+
+2. **Database Connection Issues**
+
+   - Ensure MySQL container is healthy before running migrations
+   - Check that database users have correct permissions
+
+3. **Migration Failures**
+
+   - Run `./docker-run.sh migrate` to apply migrations
+   - Check migration logs for specific errors
+
+4. **Certificate Issues**
+   - Self-signed certificates are used for development
+   - Accept the security warning in your browser
+   - For production, replace with proper certificates
+
+#### Reset Everything
+
+```bash
+# Stop and remove all containers, networks, and volumes
+./docker-run.sh clean
+
+# Start fresh
+./docker-run.sh dev
+./docker-run.sh migrate
 ```
 
 ## Manual Setup (Without Docker)
@@ -68,7 +261,7 @@ A secure web application for sharing code snippets, built with Go and MySQL. Fea
 
    ```bash
    git clone <repository-url>
-   cd snippetbox
+   cd noter
    go mod download
    ```
 
@@ -76,7 +269,7 @@ A secure web application for sharing code snippets, built with Go and MySQL. Fea
 
    ```bash
    # Create database
-   mysql -u root -p -e "CREATE DATABASE snippetbox;"
+   mysql -u root -p -e "CREATE DATABASE noter;"
 
    # Copy environment file
    cp .env.example .env.development
@@ -137,8 +330,11 @@ make audit            # Run vet + staticcheck + govulncheck
 
 ```bash
 # Start services
-./docker-run.sh up-dev      # Development mode
-./docker-run.sh up          # Production mode
+./docker-run.sh dev         # Development mode
+./docker-run.sh prod        # Production mode
+
+# Database management
+./docker-run.sh migrate     # Run database migrations
 
 # Development tools
 ./docker-run.sh test        # Run tests
@@ -174,41 +370,88 @@ make audit            # Run vet + staticcheck + govulncheck
 │   ├── validator/       # Input validation
 │   ├── logger/          # Logging utilities
 │   └── assert/          # Test assertions
-├── db/schema/           # Database schema management
-│   ├── migrations/      # Goose migration files
-│   └── seed/           # Database seed data
+├── db/                  # Database configuration
+│   ├── schema/          # Database schema management
+│   │   ├── migrations/  # Goose migration files
+│   │   └── seed/        # Database seed data
+│   └── init/            # MySQL initialization scripts
+│       └── 01-create-databases-and-users.sql
 ├── ui/                  # User interface assets
 │   ├── html/           # HTML templates
 │   ├── static/         # CSS, JS, images
 │   └── efs.go          # Embedded file system
 ├── tls/                # TLS certificates
-└── bin/                # Built binaries (generated)
+├── bin/                # Built binaries (generated)
+├── docker-compose.yml  # Docker Compose configuration
+├── Dockerfile          # Go application Docker image
+├── docker-run.sh       # Docker helper script
+├── dev.env             # Development environment variables
+├── env.template        # Environment template
+└── entrypoint.sh       # Container entrypoint script
 ```
 
 ## Configuration
 
 The application uses environment-specific configuration files:
 
-- `.env.development` - Development settings
+- `dev.env` - Development settings (Docker)
+- `env.template` - Template for creating environment files
+- `.env.development` - Development settings (manual setup)
 - `.env.production` - Production settings
 - `.env.test` - Test settings
 - `.env` - Fallback configuration
 
-### Key Environment Variables
+### Docker Environment Variables
+
+The Docker setup uses `dev.env` for development configuration:
 
 ```bash
 # Server Configuration
 HOST=localhost
-PORT=4444
+PORT=4000
+ENVIROMENT=development
+
+# Database Configuration
+GOOSE_DRIVER=mysql
+GOOSE_DBSTRING=noter_admin:admin@tcp(mysql:3306)/noter
+GOOSE_MIGRATION_DIR=./db/schema/migrations
+GOOSE_SEED_DIR=./db/schema/seed
+GOOSE_TABLE=noter.goose_migrations
+DB_DSN=noter_web:pass@tcp(mysql:3306)/noter
+TEST_DB_DSN=noter_test_web:test_pass@tcp(mysql:3306)/noter_test
+
+# Application Settings
+DEBUG=true
+LOG_LEVEL=debug
 TLS_CERT=./tls/cert.pem
 TLS_KEY=./tls/key.pem
 
-# Database
-DB_DSN=user:password@tcp(localhost:3306)/snippetbox
+# Docker-specific configuration
+MYSQL_ROOT_PASSWORD=dev_root_password_change_me
+```
+
+### Manual Setup Environment Variables
+
+For manual setup, use the template to create environment files:
+
+```bash
+# Copy template
+cp env.template .env.development
+
+# Edit with your settings
+# Server Configuration
+HOST=localhost
+PORT=4000
+ENVIROMENT=development
+
+# Database Configuration
+DB_DSN=noter_web:pass@tcp(localhost:3306)/noter
+TEST_DB_DSN=noter_test_web:test_pass@/test_noter
 
 # Application Settings
-ENVIROMENT=development
 DEBUG=true
+TLS_CERT=./tls/cert.pem
+TLS_KEY=./tls/key.pem
 ```
 
 ## Security Features

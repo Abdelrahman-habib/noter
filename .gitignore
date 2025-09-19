@@ -18,10 +18,12 @@ dist/
 
 # Go workspace file
 go.work
+.config/
 
 # Environment variables
 .env
 .env.*
+*.env
 !.env.template
 
 # IDE and editor files
@@ -79,3 +81,7 @@ config.local.*
 *.key
 *.crt
 tls/
+
+# Cache directories
+.cache/
+cache/

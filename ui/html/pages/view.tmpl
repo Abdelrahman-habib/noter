@@ -1,13 +1,13 @@
-{{define "title"}}Snippet #{{.Snippet.ID}}{{end}}
+{{define "title"}}Note #{{.Note.ID}}{{end}}
 
 {{define "main"}}
-    {{with  .Snippet}}
-    <div class='snippet'>
+    {{with  .Note}}
+    <div class='note'>
         <div class='metadata'>
             <strong> 
-                <abbr title="{{if .Public}}Public{{else}}Private{{end}}" class="snippet-visibility">{{if .Public}}🌐{{else}}🔒{{end}}</abbr> {{.Title}}
+                <abbr title="{{if .Public}}Public{{else}}Private{{end}}" class="note-visibility">{{if .Public}}🌐{{else}}🔒{{end}}</abbr> {{.Title}}
             </strong>   
-            <span class="snippet-id" title="{{.Username}}">Created by: {{truncate .Username 25}}</span>
+            <span class="note-id" title="{{.Username}}">Created by: {{truncate .Username 25}}</span>
         </div>
         <pre><code>{{.Content}}</code></pre>
         <div class='metadata'>
@@ -16,21 +16,21 @@
         </div>
     </div>
     {{end}}
-    {{if .IsUserSnippet}}
-    <div class="snippet-actions">
-        <a class="button" href="/snippet/edit/{{.Snippet.ID}}">Edit</a>
+    {{if .IsUserNote}}
+    <div class="note-actions">
+        <a class="button" href="/note/edit/{{.Note.ID}}">Edit</a>
         <button class="button dialog-open-button">Delete</button>
     </div>
     {{end}}
     {{template "dialog" .}}
 {{end}}
 
-{{define "dialog-action"}}/snippet/delete/{{.Snippet.ID}}{{end}}
-{{define "dialog-title"}}Delete Snippet{{end}}
+{{define "dialog-action"}}/note/delete/{{.Note.ID}}{{end}}
+{{define "dialog-title"}}Delete Note{{end}}
 {{define "dialog-close-text"}}Cancel{{end}}
-{{define "dialog-submit-text"}}Delete Snippet{{end}}
+{{define "dialog-submit-text"}}Delete Note{{end}}
 {{define "dialog-content"}}
     <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
-    <p>Are you sure you want to delete this snippet? This action cannot be undone.</p>
+    <p>Are you sure you want to delete this note? This action cannot be undone.</p>
 {{end}}
 {{define "dialog-footer"}}{{end}}

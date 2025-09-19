@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/Abdelrahman-habib/snippetbox/internal/assert"
+	"github.com/Abdelrahman-habib/noter/internal/assert"
 )
 
 func TestPing(t *testing.T) {
@@ -18,7 +18,7 @@ func TestPing(t *testing.T) {
 	assert.Equal(t, body, "OK")
 }
 
-func TestSnippetView(t *testing.T) {
+func TestNoteView(t *testing.T) {
 	app := newTestApplication(t)
 	ts := newTestServer(t, app.routes())
 
@@ -32,33 +32,33 @@ func TestSnippetView(t *testing.T) {
 	}{
 		{
 			name:     "Valid ID",
-			urlPath:  "/snippet/view/550e8400-e29b-41d4-a716-446655440000",
+			urlPath:  "/note/view/550e8400-e29b-41d4-a716-446655440000",
 			wantCode: http.StatusOK,
 			wantBody: "An old silent pond...",
 		},
 		{
 			name:     "Non-existent ID",
-			urlPath:  "/snippet/view/550e8400-e29b-41d4-a716-446655440999",
+			urlPath:  "/note/view/550e8400-e29b-41d4-a716-446655440999",
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "Negative ID",
-			urlPath:  "/snippet/view/-1",
+			urlPath:  "/note/view/-1",
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "Decimal ID",
-			urlPath:  "/snippet/view/1.23",
+			urlPath:  "/note/view/1.23",
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "String ID",
-			urlPath:  "/snippet/view/foo",
+			urlPath:  "/note/view/foo",
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "Empty ID",
-			urlPath:  "/snippet/view/",
+			urlPath:  "/note/view/",
 			wantCode: http.StatusNotFound,
 		},
 	}
@@ -185,16 +185,16 @@ func TestUserSignup(t *testing.T) {
 	}
 }
 
-func TestSnippeCreate(t *testing.T) {
+func TestNoteCreate(t *testing.T) {
 	app := newTestApplication(t)
 	ts := newTestServer(t, app.routes())
 	defer ts.Close()
 	t.Run("Unauthenticated users are redirected to the login form.", func(t *testing.T) {
-		code, headers, _ := ts.get(t, "/snippet/create")
+		code, headers, _ := ts.get(t, "/note/create")
 		assert.Equal(t, code, http.StatusSeeOther)
 		assert.Equal(t, headers.Get("Location"), "/user/login")
 	})
-	t.Run("Authenticated users are shown the form to create a new snippet.", func(t *testing.T) {
+	t.Run("Authenticated users are shown the form to create a new note.", func(t *testing.T) {
 		email, password := "alice@example.com", "pa$$word"
 		_, _, body := ts.get(t, "/user/login")
 		token := extractCSRFToken(t, body)
@@ -203,8 +203,8 @@ func TestSnippeCreate(t *testing.T) {
 		form.Add("password", password)
 		form.Add("csrf_token", token)
 		ts.postForm(t, "/user/login", form)
-		code, _, body := ts.get(t, "/snippet/create")
+		code, _, body := ts.get(t, "/note/create")
 		assert.Equal(t, code, http.StatusOK)
-		assert.StringContains(t, body, "<form action='/snippet/create' method='POST'>")
+		assert.StringContains(t, body, "<form action='/note/create' method='POST'>")
 	})
 }

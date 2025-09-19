@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Abdelrahman-habib/snippetbox/internal/models"
-	"github.com/Abdelrahman-habib/snippetbox/internal/validator"
+	"github.com/Abdelrahman-habib/noter/internal/models"
+	"github.com/Abdelrahman-habib/noter/internal/validator"
 	"github.com/google/uuid"
 )
 
-type snippetUpsertForm struct {
+type noteUpsertForm struct {
 	ID                  string `form:"id"`
 	Title               string `form:"title"`
 	Content             string `form:"content"`
@@ -42,19 +42,19 @@ type userChangePasswordForm struct {
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	snippets, err := app.snippets.Latest()
+	notes, err := app.notes.Latest()
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
 
 	data := app.newTemplateData(r)
-	data.Snippets = snippets
+	data.Notes = notes
 
 	app.render(w, r, http.StatusOK, "home.tmpl", data)
 }
 
-func (app *application) listSnippets(w http.ResponseWriter, r *http.Request) {
+func (app *application) listNotes(w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
 	if page == "" {
 		page = "1"
@@ -65,7 +65,7 @@ func (app *application) listSnippets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	showPublic := true
-	snippets, metaData, err := app.snippets.GetByPage(pageInt, 10, &showPublic, nil)
+	notes, metaData, err := app.notes.GetByPage(pageInt, 10, &showPublic, nil)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
@@ -73,14 +73,14 @@ func (app *application) listSnippets(w http.ResponseWriter, r *http.Request) {
 	app.logger.Debug("meta data", slog.Any("metaData", metaData))
 
 	data := app.newTemplateData(r)
-	data.Snippets = snippets
+	data.Notes = notes
 	data.CurrentPage = pageInt
 	data.HasNext = metaData.HasNext
-	// Don't set SnippetsFilters for listSnippets - this is for public snippets only
+	// Don't set NotesFilters for listNotes - this is for public notes only
 	app.render(w, r, http.StatusOK, "list.tmpl", data)
 }
 
-func (app *application) mySnippets(w http.ResponseWriter, r *http.Request) {
+func (app *application) myNotes(w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
 	if page == "" {
 		page = "1"
@@ -102,7 +102,7 @@ func (app *application) mySnippets(w http.ResponseWriter, r *http.Request) {
 
 	userID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
 
-	snippets, metaData, err := app.snippets.GetByPage(pageInt, 10, showPublic, &userID)
+	notes, metaData, err := app.notes.GetByPage(pageInt, 10, showPublic, &userID)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
@@ -110,17 +110,17 @@ func (app *application) mySnippets(w http.ResponseWriter, r *http.Request) {
 	app.logger.Debug("meta data", slog.Any("metaData", metaData))
 
 	data := app.newTemplateData(r)
-	data.Snippets = snippets
+	data.Notes = notes
 	data.CurrentPage = pageInt
 	data.HasNext = metaData.HasNext
-	data.SnippetsFilters = &models.SnippetsFilters{
+	data.NotesFilters = &models.NotesFilters{
 		ShowPublic: showPublic, // Pass the original pointer (can be nil, true, or false)
 	}
 
 	app.render(w, r, http.StatusOK, "list.tmpl", data)
 }
 
-func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
+func (app *application) noteView(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	err := uuid.Validate(id)
@@ -130,7 +130,7 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
-	snippet, err := app.snippets.Get(id, &userID)
+	note, err := app.notes.Get(id, &userID)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
 			app.clientError(w, http.StatusNotFound)
@@ -141,16 +141,16 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := app.newTemplateData(r)
-	data.Snippet = snippet
-	data.IsUserSnippet = snippet.CreatedBy == userID
+	data.Note = note
+	data.IsUserNote = note.CreatedBy == userID
 
 	app.render(w, r, http.StatusOK, "view.tmpl", data)
 
 }
 
-func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
+func (app *application) noteCreate(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
-	data.Form = snippetUpsertForm{
+	data.Form = noteUpsertForm{
 		ID:         "",
 		Expires:    365,
 		Visibility: "private",
@@ -158,8 +158,8 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, http.StatusOK, "create.tmpl", data)
 }
 
-func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	var form snippetUpsertForm
+func (app *application) noteCreatePost(w http.ResponseWriter, r *http.Request) {
+	var form noteUpsertForm
 
 	err := app.decodePostForm(r, &form)
 	if err != nil {
@@ -180,10 +180,10 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 	}
 
 	userID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
-	snippetID := form.ID
+	noteID := form.ID
 	isEditForm := form.ID != ""
 	if isEditForm {
-		err = uuid.Validate(snippetID)
+		err = uuid.Validate(noteID)
 		if err != nil {
 			app.clientError(w, http.StatusNotFound)
 			return
@@ -192,7 +192,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 
 	var id string
 	if isEditForm {
-		id, err = app.snippets.Update(form.ID, form.Title, form.Content, form.Expires, form.Visibility == "public", userID)
+		id, err = app.notes.Update(form.ID, form.Title, form.Content, form.Expires, form.Visibility == "public", userID)
 		if err != nil {
 			if errors.Is(err, models.ErrNoRecord) {
 				app.clientError(w, http.StatusNotFound)
@@ -202,23 +202,23 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 			return
 		}
 	} else {
-		id, err = app.snippets.Insert(form.Title, form.Content, form.Expires, form.Visibility == "public", userID)
+		id, err = app.notes.Insert(form.Title, form.Content, form.Expires, form.Visibility == "public", userID)
 		if err != nil {
 			app.serverError(w, r, err)
 			return
 		}
 	}
-	flashMessage := "Snippet successfully created!"
+	flashMessage := "Note successfully created!"
 	if isEditForm {
-		flashMessage = "Snippet successfully updated!"
+		flashMessage = "Note successfully updated!"
 	}
 	app.sessionManager.Put(r.Context(), "flash", flashMessage)
 
-	// Redirect the user to the relevant page for the snippet.
-	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%v", id), http.StatusSeeOther)
+	// Redirect the user to the relevant page for the note.
+	http.Redirect(w, r, fmt.Sprintf("/note/view/%v", id), http.StatusSeeOther)
 }
 
-func (app *application) snippetEdit(w http.ResponseWriter, r *http.Request) {
+func (app *application) noteEdit(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	err := uuid.Validate(id)
 	if err != nil || id == "" {
@@ -227,7 +227,7 @@ func (app *application) snippetEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
-	snippet, err := app.snippets.Get(id, &userID)
+	note, err := app.notes.Get(id, &userID)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
 			app.clientError(w, http.StatusNotFound)
@@ -236,24 +236,24 @@ func (app *application) snippetEdit(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, r, err)
 		return
 	}
-	// expires is days between snippet.Created and snippet.Expires
-	expires := int(snippet.Expires.Sub(snippet.Created).Hours() / 24)
+	// expires is days between note.Created and note.Expires
+	expires := int(note.Expires.Sub(note.Created).Hours() / 24)
 	visibility := "private"
-	if snippet.Public {
+	if note.Public {
 		visibility = "public"
 	}
 	data := app.newTemplateData(r)
-	data.Form = snippetUpsertForm{
-		ID:         snippet.ID,
-		Title:      snippet.Title,
-		Content:    snippet.Content,
+	data.Form = noteUpsertForm{
+		ID:         note.ID,
+		Title:      note.Title,
+		Content:    note.Content,
 		Expires:    expires,
 		Visibility: visibility,
 	}
 	app.render(w, r, http.StatusOK, "create.tmpl", data)
 }
 
-func (app *application) snippetDeletePost(w http.ResponseWriter, r *http.Request) {
+func (app *application) noteDeletePost(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	err := uuid.Validate(id)
 
@@ -261,16 +261,15 @@ func (app *application) snippetDeletePost(w http.ResponseWriter, r *http.Request
 		app.clientError(w, http.StatusNotFound)
 		return
 	}
-	app.logger.Debug("deleting snippet", slog.String("id", id))
 
 	userID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
-	err = app.snippets.Delete(id, &userID)
+	err = app.notes.Delete(id, &userID)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
-	app.sessionManager.Put(r.Context(), "flash", "Snippet successfully deleted!")
-	http.Redirect(w, r, "/my-snippets", http.StatusSeeOther)
+	app.sessionManager.Put(r.Context(), "flash", "Note successfully deleted!")
+	http.Redirect(w, r, "/my-notes", http.StatusSeeOther)
 }
 
 // Display a form for signing up a new user
@@ -374,7 +373,7 @@ func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, path, http.StatusSeeOther)
 		return
 	}
-	http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
+	http.Redirect(w, r, "/note/create", http.StatusSeeOther)
 }
 
 // log out a user
