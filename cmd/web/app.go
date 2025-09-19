@@ -24,17 +24,11 @@ type application struct {
 }
 
 func (app *application) serve() error {
-	// only elliptic curves with assembly implementations are used
-	tlsConfig := &tls.Config{
-		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
-	}
-
 	server := &http.Server{
 		Addr:    app.config.addr,
 		Handler: app.routes(),
 
-		ErrorLog:  slog.NewLogLogger(app.logger.Handler(), slog.LevelError),
-		TLSConfig: tlsConfig,
+		ErrorLog: slog.NewLogLogger(app.logger.Handler(), slog.LevelError),
 
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -42,9 +36,16 @@ func (app *application) serve() error {
 	}
 	app.logger.Info("starting server", slog.String("addr", server.Addr))
 
-	if app.config.tlsCert != "" && app.config.tlsKey != "" {
+	// Use TLS only in development if certificate files are available
+	// In production (Render), TLS is handled by the platform
+	if app.config.env == envDevelopment && app.config.tlsCert != "" && app.config.tlsKey != "" {
+		// only elliptic curves with assembly implementations are used
+		tlsConfig := &tls.Config{
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+		}
+		server.TLSConfig = tlsConfig
 		return server.ListenAndServeTLS(app.config.tlsCert, app.config.tlsKey)
 	}
-	return server.ListenAndServe()
 
+	return server.ListenAndServe()
 }

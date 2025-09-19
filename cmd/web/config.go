@@ -47,6 +47,12 @@ func parseFlags() *config {
 		os.Exit(1)
 	}
 
+	// Get DSN from environment variable if available, otherwise use flag
+	dsnValue := *dsn
+	if envDSN := os.Getenv("DB_DSN"); envDSN != "" {
+		dsnValue = envDSN
+	}
+
 	return &config{
 		addr:      *addr,
 		debugMode: *debugMode,
@@ -55,7 +61,7 @@ func parseFlags() *config {
 		tlsCert: *tlsCert,
 		tlsKey:  *tlsKey,
 
-		dsn: *dsn,
+		dsn: dsnValue,
 	}
 }
 
