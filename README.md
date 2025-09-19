@@ -1,6 +1,6 @@
 # Noter
 
-A secure web application for sharing Notes, Qoutes, and any text in general, built with Go and MySQL. Features user authentication, session management, and HTTPS support.
+A secure web application for sharing Notes, Quotes, and any text in general, built with Go and MySQL. Features user authentication, session management, and HTTPS support.
 
 ## Features
 
