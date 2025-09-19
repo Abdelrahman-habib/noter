@@ -24,7 +24,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := openDB(config.dsn)
+	// Build the DSN with safe parameter handling
+	dsn, err := buildDSN(config.dsn)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	db, err := openDB(dsn)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -54,7 +61,6 @@ func main() {
 }
 
 func openDB(dsn string) (*sql.DB, error) {
-	dsn += "?parseTime=true"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err

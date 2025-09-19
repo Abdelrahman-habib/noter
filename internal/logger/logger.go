@@ -12,7 +12,7 @@ const (
 func NewLogger(env string) *slog.Logger {
 	var handler slog.Handler
 	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: slog.LevelInfo,
 	}
 	if env == envDevelopment {
 		opts.AddSource = true

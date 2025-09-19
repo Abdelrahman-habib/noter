@@ -1,6 +1,6 @@
 # Environment file selection based on ENV variable
 ENV ?= development
-ENV_FILE = .env.$(ENV)
+ENV_FILE = ./$(ENV).env
 
 .PHONY: run run-dev run-prod run-test run-all migrate-up migrate-down seed-up seed-down seed-reset build build-dev build-prod build-test build-all clean test lint audit migrate-test-up migrate-test-down migrate-test-reset seed-test-up seed-test-down seed-test-reset init-test-db teardown-test-db migrate-reset
 
@@ -29,24 +29,27 @@ run-all:
 	make run-dev && make run-prod && make run-test
 
 migrate-up:
-	goose -dir db/schema/migrations up
+	goose -dir db/schema/migrations up -env $(ENV_FILE)
 
 migrate-down:
-	goose -dir db/schema/migrations down
+	goose -dir db/schema/migrations down -env $(ENV_FILE)
 
 migrate-reset:
-	goose -dir db/schema/migrations reset
+	goose -dir db/schema/migrations reset -env $(ENV_FILE)
+
+migrate-status:
+	goose -dir db/schema/migrations status -env $(ENV_FILE)
 
 seed-up:
 	@if [ "$(ENVIROMENT)" == "test" ] || [ "$(ENVIROMENT)" == "development" ]; then \
-		goose -dir db/schema/seed -no-versioning up; \
+		goose -dir db/schema/seed -no-versioning up -env $(ENV_FILE); \
 	else \
 		echo "seed is only allowed in test and development environment"; \
 		exit 1; \
 	fi
 seed-down:
 	@if [ "$(ENVIROMENT)" == "test" ] || [ "$(ENVIROMENT)" == "development" ]; then \
-		goose -dir db/schema/seed -no-versioning down; \
+		goose -dir db/schema/seed -no-versioning down -env $(ENV_FILE); \
 	else \
 		echo "seed is only allowed in test and development environment"; \
 		exit 1; \
@@ -54,29 +57,29 @@ seed-down:
 
 seed-reset:
 	@if [ "$(ENVIROMENT)" == "test" ] || [ "$(ENVIROMENT)" == "development" ]; then \
-		goose -dir db/schema/seed -no-versioning reset; \
+		goose -dir db/schema/seed -no-versioning reset -env $(ENV_FILE); \
 	else \
 		echo "seed is only allowed in test and development environment"; \
 		exit 1; \
 	fi
 
 migrate-test-up:
-	goose dir db/schema/migrations mysql '$(TEST_DB_DSN)' up
+	goose dir db/schema/migrations mysql '$(TEST_DB_DSN)' up -env $(ENV_FILE)
 
 migrate-test-down:
-	goose dir db/schema/migrations mysql '$(TEST_DB_DSN)' down
+	goose dir db/schema/migrations mysql '$(TEST_DB_DSN)' down -env $(ENV_FILE)
 
 migrate-test-reset:
-	goose dir db/schema/migrations mysql '$(TEST_DB_DSN)' reset
+	goose dir db/schema/migrations mysql '$(TEST_DB_DSN)' reset -env $(ENV_FILE)
 
 seed-test-up:
-	goose -dir db/schema/seed -no-versioning mysql '$(TEST_DB_DSN)' up
+	goose -dir db/schema/seed -no-versioning mysql '$(TEST_DB_DSN)' up -env $(ENV_FILE)
 
 seed-test-down:
-	goose -dir db/schema/seed -no-versioning mysql '$(TEST_DB_DSN)' down
+	goose -dir db/schema/seed -no-versioning mysql '$(TEST_DB_DSN)' down -env $(ENV_FILE)
 
 seed-test-reset:
-	goose -dir db/schema/seed -no-versioning mysql '$(TEST_DB_DSN)' reset
+	goose -dir db/schema/seed -no-versioning mysql '$(TEST_DB_DSN)' reset -env $(ENV_FILE)	
 
 init-test-db:
 	@$(MAKE) migrate-test-up

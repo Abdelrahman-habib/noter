@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strings"
 )
 
 const (
@@ -56,4 +57,20 @@ func parseFlags() *config {
 
 		dsn: *dsn,
 	}
+}
+
+// buildDSN safely adds required parameters to the DSN
+func buildDSN(dsn string) (string, error) {
+	// Check if DSN already has query parameters
+	separator := "?"
+	if strings.Contains(dsn, "?") {
+		separator = "&"
+	}
+
+	// Add parseTime parameter if not already present
+	if !strings.Contains(dsn, "parseTime=") {
+		dsn += separator + "parseTime=true"
+	}
+
+	return dsn, nil
 }
