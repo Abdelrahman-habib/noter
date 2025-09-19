@@ -41,13 +41,13 @@ A secure web application for sharing Notes, Qoutes, and any text in general, bui
 2. **Start development environment**
 
    ```bash
-   ./docker-run.sh dev
+   ./scripts/docker-run.sh dev
    ```
 
 3. **Run database migrations** (first time only)
 
    ```bash
-   ./docker-run.sh migrate
+   ./scripts/docker-run.sh migrate
    ```
 
 4. **Access the application**
@@ -330,27 +330,33 @@ make audit            # Run vet + staticcheck + govulncheck
 
 ```bash
 # Start services
-./docker-run.sh dev         # Development mode
-./docker-run.sh prod        # Production mode
+./scripts/docker-run.sh dev         # Development mode
+./scripts/docker-run.sh prod        # Production mode
 
 # Database management
-./docker-run.sh migrate     # Run database migrations
+./scripts/docker-run.sh migrate         # Run database migrations (dev)
+./scripts/docker-run.sh migrate-dev     # Run database migrations (dev)
+./scripts/docker-run.sh migrate-prod    # Run database migrations (prod)
+./scripts/docker-run.sh migrate-up      # Run migrations up (dev)
+./scripts/docker-run.sh migrate-down    # Run migrations down (dev)
+./scripts/docker-run.sh migrate-reset   # Reset all migrations (dev)
+./scripts/docker-run.sh migrate-status  # Check migration status (dev)
 
 # Development tools
-./docker-run.sh test        # Run tests
-./docker-run.sh lint        # Run linting
-./docker-run.sh audit       # Run security audit
-./docker-run.sh tools       # Start tools container
+./scripts/docker-run.sh test        # Run tests
+./scripts/docker-run.sh lint        # Run linting
+./scripts/docker-run.sh audit       # Run security audit
+./scripts/docker-run.sh tools       # Start tools container
 
 # Logs and debugging
-./docker-run.sh logs-web    # View application logs
-./docker-run.sh logs-db     # View database logs
-./docker-run.sh shell       # Access app container
-./docker-run.sh db-shell    # Access MySQL shell
+./scripts/docker-run.sh logs-web    # View application logs
+./scripts/docker-run.sh logs-mysql  # View database logs
+./scripts/docker-run.sh shell       # Access app container
+./scripts/docker-run.sh db-shell    # Access MySQL shell
 
 # Cleanup
-./docker-run.sh down        # Stop services
-./docker-run.sh clean       # Remove all containers and volumes
+./scripts/docker-run.sh down        # Stop services
+./scripts/docker-run.sh clean       # Remove all containers and volumes
 ```
 
 ## Project Structure
@@ -380,14 +386,17 @@ make audit            # Run vet + staticcheck + govulncheck
 │   ├── html/           # HTML templates
 │   ├── static/         # CSS, JS, images
 │   └── efs.go          # Embedded file system
+├── scripts/            # Helper scripts
+│   ├── docker-run.sh  # Docker helper script
+│   └── entrypoint.sh  # Container entrypoint script
 ├── tls/                # TLS certificates
 ├── bin/                # Built binaries (generated)
 ├── docker-compose.yml  # Docker Compose configuration
 ├── Dockerfile          # Go application Docker image
-├── docker-run.sh       # Docker helper script
-├── dev.env             # Development environment variables
-├── env.template        # Environment template
-└── entrypoint.sh       # Container entrypoint script
+├── dev.env            # Development environment variables
+├── prod.env           # Production environment variables
+├── env.template       # Environment variables template
+├── makefile           # Make commands for development
 ```
 
 ## Configuration

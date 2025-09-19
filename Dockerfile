@@ -42,10 +42,10 @@ COPY --from=builder /go/bin/goose /usr/local/bin/goose
 COPY --from=builder /app/db ./db
 COPY --from=builder /app/ui ./ui
 COPY --from=builder /app/tls ./tls
-COPY --from=builder /app/entrypoint.sh ./
+COPY --from=builder /app/scripts/entrypoint.sh ./scripts/
 
 # Make entrypoint executable
-RUN chmod +x entrypoint.sh
+RUN chmod +x scripts/entrypoint.sh
 
 # Create a non-root user
 RUN addgroup -g 1001 -S noter && \

@@ -71,7 +71,7 @@ services:
     working_dir: /app
     networks:
       - noter-network
-    entrypoint: ["./entrypoint.sh"]
+    entrypoint: ["./scripts/entrypoint.sh"]
     command:
       [
         "-addr",
