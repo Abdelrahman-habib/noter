@@ -7,7 +7,7 @@
             <strong> 
                 <abbr title="{{if .Public}}Public{{else}}Private{{end}}" class="note-visibility">{{if .Public}}🌐{{else}}🔒{{end}}</abbr> {{.Title}}
             </strong>   
-            <span class="note-id" title="{{.Username}}">Created by: {{truncate .Username 25}}</span>
+            <span class="note-id" title="{{.Username}}">Created by: <a href="/user/{{.CreatedBy}}">{{truncate .Username 25}}</a></span>
         </div>
         <pre><code>{{.Content}}</code></pre>
         <div class='metadata'>

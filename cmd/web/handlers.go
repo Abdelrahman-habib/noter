@@ -467,3 +467,78 @@ func (app *application) accountView(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, http.StatusOK, "account.tmpl", data)
 
 }
+
+func (app *application) userProfile(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		app.clientError(w, http.StatusNotFound)
+		return
+	}
+
+	user, err := app.users.GetByID(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.clientError(w, http.StatusNotFound)
+			return
+		}
+		app.serverError(w, r, err)
+		return
+	}
+
+	// Check if the current user is viewing their own profile
+	currentUserID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
+	isOwnProfile := currentUserID == id
+
+	var showPublic *bool
+	// If it's not their own profile, only show public notes
+	if !isOwnProfile {
+		trueBool := true
+		showPublic = &trueBool
+	}
+
+	// Fetch notes for the user
+	// We'll use a default page of 1, if no page is specified in the query string
+	page := r.URL.Query().Get("page")
+	if page == "" {
+		page = "1"
+	}
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	notes, metaData, err := app.notes.GetByPage(pageInt, 10, showPublic, &id)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	data := app.newTemplateData(r)
+	data.User = user
+	data.Notes = notes
+	data.CurrentPage = pageInt
+	data.HasNext = metaData.HasNext
+
+	// Only pass NotesFilters if it's their own profile
+	if isOwnProfile {
+		// Parse 'show' query param to set active filter state
+		show := r.URL.Query().Get("show")
+		var filterShowPublic *bool
+		switch show {
+		case "public":
+			trueBool := true
+			filterShowPublic = &trueBool
+		case "private":
+			falseBool := false
+			filterShowPublic = &falseBool
+		}
+
+		data.NotesFilters = &models.NotesFilters{
+			ShowPublic: filterShowPublic,
+		}
+	}
+
+	app.render(w, r, http.StatusOK, "profile.tmpl", data)
+}

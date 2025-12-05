@@ -1,0 +1,26 @@
+{{define "title"}}User Profile{{end}}
+
+{{define "main"}}
+    <div class="profile-header">
+        <h2 class="mb-0">👤 {{.User.Name}}</h2>
+        <p>Joined: {{humanDate .User.Created}}</p>
+    </div>
+    <div class="divider"></div>
+    <div class="profile-notes">
+        <h3 class="flex justify-between items-start mb-2">
+            Notes
+            <div class="flex justify-between items-center gap">
+                <a {{if eq .CurrentPage 1}}disabled{{else}}href='/user/{{.User.ID}}?page={{sub .CurrentPage 1}}{{if .NotesFilters}}{{if .NotesFilters.ShowPublic}}&show=public{{else if boolPtrIsFalse .NotesFilters.ShowPublic}}&show=private{{end}}{{end}}'{{end}}>Previous</a>
+                <a {{if .HasNext}}href='/user/{{.User.ID}}?page={{add .CurrentPage 1}}{{if .NotesFilters}}{{if .NotesFilters.ShowPublic}}&show=public{{else if boolPtrIsFalse .NotesFilters.ShowPublic}}&show=private{{end}}{{end}}'{{else}}disabled{{end}}>Next</a>
+            </div>
+        </h3>
+        {{if .NotesFilters}}
+            <div class="filters">
+                <a href='/user/{{.User.ID}}?show=all' {{if boolPtrIsNil .NotesFilters.ShowPublic}}class="active"{{end}}>All</a>
+                <a href='/user/{{.User.ID}}?show=public' {{if boolPtrIsTrue .NotesFilters.ShowPublic}}class="active"{{end}}>🌐 Public</a>
+                <a href='/user/{{.User.ID}}?show=private' {{if boolPtrIsFalse .NotesFilters.ShowPublic}}class="active"{{end}}>🔒 Private</a>
+            </div>
+        {{end}}
+        {{template "notes-grid" .}}
+    </div>
+{{end}}
