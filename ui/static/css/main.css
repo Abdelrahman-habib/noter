@@ -307,8 +307,7 @@ nav form {
   background-image: url("/static/img/logo.png");
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  background-size: 20px 20px;
-  height: 20px;
+  background-size: auto 30px;
   padding-left: 30px;
   position: relative;
   margin-right: 2em;
@@ -316,7 +315,7 @@ nav form {
   text-decoration: none;
   display: inline-block;
   vertical-align: middle;
-  line-height: 20px;
+  line-height: 30px;
 }
 
 .nav-logo:hover {
