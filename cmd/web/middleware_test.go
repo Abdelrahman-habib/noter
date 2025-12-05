@@ -35,3 +35,24 @@ func TestCommonHeaders(t *testing.T) {
 	assert.Equal(t, string(bytes.TrimSpace(body)), "OK")
 
 }
+
+func TestCacheControlMiddleware(t *testing.T) {
+	rr, r := httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil)
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	})
+
+	app := &application{}
+	app.cacheControlMiddleware(next).ServeHTTP(rr, r)
+
+	rs := rr.Result()
+	assert.Equal(t, rs.Header.Get("Cache-Control"), "public, max-age=86400")
+	assert.Equal(t, rs.StatusCode, http.StatusOK)
+
+	defer rs.Body.Close()
+	body, err := io.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, string(bytes.TrimSpace(body)), "OK")
+}
