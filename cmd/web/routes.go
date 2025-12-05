@@ -13,7 +13,7 @@ func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 	fileServer := fileserver.NewFileServer(ui.Files)
 
-	mux.Handle("GET /static/", fileServer)
+	mux.Handle("GET /static/", alice.New(app.cacheControlMiddleware).Then(fileServer))
 	mux.HandleFunc("GET /ping", app.ping)
 	dynamic := alice.New(app.sessionManager.LoadAndSave, app.noSurfMiddleware, app.authenticateMiddleware)
 
