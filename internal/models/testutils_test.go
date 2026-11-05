@@ -3,11 +3,11 @@ package models
 import (
 	"database/sql"
 	"flag"
-	"os"
 	"sync"
 	"testing"
 
 	schema "github.com/Abdelrahman-habib/noter/db/schema"
+	"github.com/Abdelrahman-habib/noter/internal/env"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
@@ -26,7 +26,7 @@ type testDBConfig struct {
 var (
 	// Register flags before the test runner parses them.
 	dbDialect = flag.String("db-dialect", "postgres", "Goose migration dialect (eg: postgres)")
-	testDSN   = flag.String("test-dsn", envDefault("TEST_DB_DSN", defaultTestDSN), "PostgreSQL test database connection string")
+	testDSN   = flag.String("test-dsn", env.Default("TEST_DB_DSN", defaultTestDSN), "PostgreSQL test database connection string")
 
 	configOnce     sync.Once
 	configInstance *testDBConfig
@@ -80,14 +80,6 @@ func newTestDB(t *testing.T) *sql.DB {
 
 	// Return the database connection pool.
 	return db
-}
-
-// envDefault uses the environment variable as the flag default
-func envDefault(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }
 
 func getTestDBConfig() *testDBConfig {

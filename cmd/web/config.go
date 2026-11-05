@@ -4,7 +4,8 @@ import (
 	"flag"
 	"log"
 	"os"
-	"strconv"
+
+	"github.com/Abdelrahman-habib/noter/internal/env"
 )
 
 const (
@@ -12,21 +13,6 @@ const (
 	envProduction  = "production"
 	envTest        = "test"
 )
-
-// envDefault uses the environment variable as the flag default
-func envDefault(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
-
-// envBool parses a boolean environment variable for flag defaults
-// (strconv.ParseBool accepts 1, t, T, TRUE, true, True).
-func envBool(key string) bool {
-	value, _ := strconv.ParseBool(envDefault(key, "false"))
-	return value
-}
 
 type config struct {
 	// app
@@ -45,19 +31,19 @@ type config struct {
 }
 
 func parseFlags() *config {
-	addr := flag.String("addr", ":"+envDefault("PORT", "4000"), "HTTP network address")
-	debugMode := flag.Bool("debug", envBool("DEBUG"), "enable debug mode")
-	env := flag.String("env", envDefault("ENVIROMENT", "development"), "Environment (development, production, test)")
+	addr := flag.String("addr", ":"+env.Default("PORT", "4000"), "HTTP network address")
+	debugMode := flag.Bool("debug", env.Bool("DEBUG"), "enable debug mode")
+	envFlag := flag.String("env", env.Default("ENVIROMENT", "development"), "Environment (development, production, test)")
 
-	tlsCert := flag.String("tls-cert", envDefault("TLS_CERT", "./tls/cert.pem"), "Path to TLS certificate file")
-	tlsKey := flag.String("tls-key", envDefault("TLS_KEY", "./tls/key.pem"), "Path to TLS key file")
+	tlsCert := flag.String("tls-cert", env.Default("TLS_CERT", "./tls/cert.pem"), "Path to TLS certificate file")
+	tlsKey := flag.String("tls-key", env.Default("TLS_KEY", "./tls/key.pem"), "Path to TLS key file")
 
-	dsn := flag.String("dsn", envDefault("DB_DSN", "postgres://noter_web:pass@localhost:5433/noter?sslmode=disable"), "PostgreSQL connection string (libpq URL)")
+	dsn := flag.String("dsn", env.Default("DB_DSN", "postgres://noter_web:pass@localhost:5433/noter?sslmode=disable"), "PostgreSQL connection string (libpq URL)")
 
 	flag.Parse()
 
 	// validate env
-	if *env != envDevelopment && *env != envProduction && *env != envTest {
+	if *envFlag != envDevelopment && *envFlag != envProduction && *envFlag != envTest {
 		log.Fatal("invalid environment")
 		os.Exit(1)
 	}
@@ -65,7 +51,7 @@ func parseFlags() *config {
 	return &config{
 		addr:      *addr,
 		debugMode: *debugMode,
-		env:       *env,
+		env:       *envFlag,
 
 		tlsCert: *tlsCert,
 		tlsKey:  *tlsKey,
