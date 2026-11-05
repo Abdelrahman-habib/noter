@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// Default uses the environment variable as the flag default
+// Default returns the value of the environment variable if set, otherwise fallback
 func Default(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -14,10 +14,12 @@ func Default(key, fallback string) string {
 	return fallback
 }
 
-// Bool parses a boolean environment variable for flag defaults
-// (strconv.ParseBool accepts 1, t, T, TRUE, true, True.
-// Unrecognized values are false).
-func Bool(key string) bool {
-	value, _ := strconv.ParseBool(Default(key, "false"))
+// Bool parses the environment variable with strconv.ParseBool
+// (1, t, T, TRUE, true, True); unset or unrecognized values return fallback
+func Bool(key string, fallback bool) bool {
+	value, err := strconv.ParseBool(os.Getenv(key))
+	if err != nil {
+		return fallback
+	}
 	return value
 }

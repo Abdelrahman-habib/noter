@@ -32,7 +32,7 @@ type config struct {
 
 func parseFlags() *config {
 	addr := flag.String("addr", ":"+env.Default("PORT", "4000"), "HTTP network address")
-	debugMode := flag.Bool("debug", env.Bool("DEBUG"), "enable debug mode")
+	debugMode := flag.Bool("debug", env.Bool("DEBUG", false), "enable debug mode")
 	envFlag := flag.String("env", env.Default("ENVIROMENT", "development"), "Environment (development, production, test)")
 
 	tlsCert := flag.String("tls-cert", env.Default("TLS_CERT", "./tls/cert.pem"), "Path to TLS certificate file")
