@@ -27,13 +27,15 @@ Railway offers a free tier with $5 monthly credit, perfect for testing applicati
    - Sign in with GitHub
    - Click "New Project" → "Deploy from GitHub repo"
    - Select your repository
-   - Add MySQL database service
+   - Add a PostgreSQL database service
    - Railway will auto-deploy
 
 3. **Configure Environment Variables**
 
    - Set `SESSION_SECRET` to a random string
-   - Database URL is automatically provided
+   - Railway provides a PostgreSQL `DATABASE_URL`; the `railway.json` start
+     command already passes it to the app via `-dsn=$DATABASE_URL` (the app
+     only reads `DB_DSN` or the `-dsn` flag, never `DATABASE_URL` directly)
 
 4. **Run Migrations**
 
@@ -42,14 +44,15 @@ Railway offers a free tier with $5 monthly credit, perfect for testing applicati
    railway login
    railway link
 
-   # Run migrations
-   railway run goose -dir db/schema/migrations up
+   # Run migrations (goose needs the "postgres" dialect and connection string;
+   # the quoted $DATABASE_URL is expanded by railway's child shell)
+   railway run -- sh -c 'goose -dir db/schema/migrations postgres "$DATABASE_URL" up'
    ```
 
 ### Railway Configuration
 
 - **Port**: Uses `$PORT` environment variable
-- **Database**: Automatic MySQL connection via `$DATABASE_URL`
+- **Database**: PostgreSQL via `$DATABASE_URL`, passed as the Go `-dsn` flag
 - **HTTPS**: Automatic SSL certificate
 - **Domain**: Automatic subdomain (e.g., `yourapp.railway.app`)
 
@@ -158,8 +161,14 @@ if config.tlsCert != "" && config.tlsKey != "" {
 Run migrations as part of deployment:
 
 ```bash
-goose -dir db/schema/migrations up
+# goose needs driver and connection string (or GOOSE_DRIVER/GOOSE_DBSTRING env vars)
+goose -dir db/schema/migrations postgres "$DATABASE_URL" up
 ```
+
+Production setups should provision their own PostgreSQL roles (a limited
+application role plus a migration owner role) similar to
+`db/init/01-create-databases-and-users.sql`, with the migration owner
+creating the schema.
 
 ## 💰 Cost Comparison
 
