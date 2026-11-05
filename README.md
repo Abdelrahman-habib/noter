@@ -1,12 +1,12 @@
 # Noter
 
-A secure web application for sharing Notes, Quotes, and any text in general, built with Go and MySQL. Features user authentication, session management, and HTTPS support.
+A secure web application for sharing Notes, Quotes, and any text in general, built with Go and PostgreSQL. Features user authentication, session management, and HTTPS support.
 
 ## Features
 
 - 📝 Create and share text notes
 - 🔐 User registration and authentication
-- 🍪 Secure session management with MySQL store
+- 🍪 Secure session management with PostgreSQL store
 - 🔒 CSRF protection and bcrypt password hashing
 - 🌐 HTTPS/TLS support
 - 📱 Responsive web interface
@@ -15,10 +15,10 @@ A secure web application for sharing Notes, Quotes, and any text in general, bui
 ## Technology Stack
 
 - **Language**: Go 1.25.1
-- **Database**: MySQL 8.0
+- **Database**: PostgreSQL 17 (via the `pgx/v5/stdlib` database/sql driver)
 - **Web Framework**: Standard library `net/http` with custom routing
 - **Template Engine**: Go's `html/template`
-- **Session Management**: SCS with MySQL store
+- **Session Management**: SCS with PostgreSQL store
 - **Database Migrations**: Goose
 - **Security**: CSRF protection, bcrypt password hashing
 
@@ -41,6 +41,8 @@ A secure web application for sharing Notes, Quotes, and any text in general, bui
 2. **Start development environment**
 
    ```bash
+   cp env.template dev.env
+   # In dev.env, change localhost:5433 to postgres:5432 in all database URLs.
    ./scripts/docker-run.sh dev
    ```
 
@@ -53,7 +55,7 @@ A secure web application for sharing Notes, Quotes, and any text in general, bui
 4. **Access the application**
    - Open https://localhost:4444 in your browser
    - Accept the self-signed certificate warning for development
-   - MySQL is available on localhost:3307
+   - PostgreSQL is available on localhost:5433
 
 ### Production Deployment
 
@@ -67,19 +69,19 @@ A secure web application for sharing Notes, Quotes, and any text in general, bui
 
 The Docker setup uses a multi-container architecture:
 
-- **MySQL Container**: Database server with automatic initialization
+- **PostgreSQL Container**: Database server with automatic initialization
 - **Web Container**: Go application with live reload for development
 - **Migration Container**: Runs Goose migrations (on-demand)
 
 ### Services
 
-#### MySQL Service (`noter-mysql`)
+#### PostgreSQL Service (`noter-postgres`)
 
-- **Image**: `mysql:8.0`
-- **Port**: `3307:3306` (mapped to avoid conflicts with local MySQL)
-- **Data**: Persistent volume `mysql_data`
-- **Initialization**: Automatically creates databases and users via `db/init/`
-- **Health Check**: Ensures MySQL is ready before other services start
+- **Image**: `postgres:17`
+- **Port**: `5433:5432` (mapped to avoid conflicts with a local PostgreSQL)
+- **Data**: Persistent volume `pg_data`
+- **Initialization**: Automatically creates roles and databases via `db/init/`
+- **Health Check**: Ensures PostgreSQL is ready before other services start
 
 #### Web Service (`noter-web`)
 
@@ -88,26 +90,27 @@ The Docker setup uses a multi-container architecture:
 - **Volumes**:
   - Source code mounted for live reload
   - Go module cache for faster builds
-- **Dependencies**: Waits for MySQL to be healthy
+- **Dependencies**: Waits for PostgreSQL to be healthy
 - **Environment**: Configurable via environment variables
 
 #### Migration Service (`noter-migrate`)
 
 - **Profile**: `migrate` (runs on-demand)
 - **Purpose**: Runs Goose migrations and seed data
-- **Dependencies**: Waits for MySQL to be healthy
+- **Dependencies**: Waits for PostgreSQL to be healthy
 - **Command**: `goose -dir db/schema/migrations up && goose -dir db/schema/seed -no-versioning up`
 
 ### Database Initialization
 
-The MySQL container automatically initializes with:
+The PostgreSQL container creates the databases and roles. The migration service
+creates tables and loads development seed data:
 
 1. **Database Creation**: `noter` and `noter_test` databases
-2. **User Creation**: Three users with appropriate permissions:
-   - `noter_admin`: Full privileges on `noter` database (for migrations)
-   - `noter_web`: Limited privileges on `noter` database (for application)
-   - `noter_test_web`: Full privileges on `noter_test` database (for tests)
-3. **Migration Execution**: Goose runs migrations to create tables
+2. **Role Creation**: Three roles with appropriate permissions:
+   - `noter_admin`: Owner of the `noter` database (runs migrations)
+   - `noter_web`: Read/write access for the application
+   - `noter_test_web`: Owner of the `noter_test` database (for tests)
+3. **Migration Execution**: The migration service runs Goose to create tables
 4. **Seed Data**: Sample data inserted for development
 
 ### Environment Configuration
@@ -121,13 +124,13 @@ PORT=4000
 ENVIROMENT=development
 
 # Database Configuration
-GOOSE_DRIVER=mysql
-GOOSE_DBSTRING=noter_admin:admin@tcp(mysql:3306)/noter
+GOOSE_DRIVER=postgres
+GOOSE_DBSTRING=postgres://noter_admin:admin@postgres:5432/noter?sslmode=disable
 GOOSE_MIGRATION_DIR=./db/schema/migrations
 GOOSE_SEED_DIR=./db/schema/seed
-GOOSE_TABLE=noter.goose_migrations
-DB_DSN=noter_web:pass@tcp(mysql:3306)/noter
-TEST_DB_DSN=noter_test_web:test_pass@tcp(mysql:3306)/noter_test
+GOOSE_TABLE=goose_migrations
+DB_DSN=postgres://noter_web:pass@postgres:5432/noter?sslmode=disable
+TEST_DB_DSN=postgres://noter_test_web:test_pass@postgres:5432/noter_test?sslmode=disable
 
 # Application Settings
 DEBUG=true
@@ -136,14 +139,17 @@ TLS_CERT=./tls/cert.pem
 TLS_KEY=./tls/key.pem
 
 # Docker-specific configuration
-MYSQL_ROOT_PASSWORD=dev_root_password_change_me
+POSTGRES_PASSWORD=postgres_dev_change_me
 ```
+
+Use `postgres:5432` for connections between Docker services and `localhost:5433`
+when connecting to the Docker database from the host.
 
 #### Security Considerations
 
-- **MySQL Root Password**: Configurable via `MYSQL_ROOT_PASSWORD` environment variable
-- **Default Password**: `dev_root_password_change_me` (change for production)
-- **Database Users**: Separate users with minimal required permissions
+- **PostgreSQL Superuser Password**: Configurable via `POSTGRES_PASSWORD` environment variable
+- **Default Password**: `postgres_dev_change_me` (change for anything shared)
+- **Database Roles**: Separate roles with minimal required permissions
 - **Network Isolation**: All services run in isolated Docker network
 
 ### Docker Commands
@@ -179,7 +185,7 @@ docker-compose ps
 ./docker-run.sh migrate-status   # Check migration status (dev)
 
 # Database access
-./docker-run.sh db-shell         # Access MySQL shell
+./docker-run.sh db-shell         # Access PostgreSQL shell
 ./docker-run.sh logs-db          # View database logs
 ```
 
@@ -218,13 +224,13 @@ docker-compose ps
 
 1. **Port Conflicts**
 
-   - MySQL uses port 3307 to avoid conflicts with local MySQL
+   - PostgreSQL uses port 5433 to avoid conflicts with a local PostgreSQL
    - Web app uses port 4444 for HTTPS
 
 2. **Database Connection Issues**
 
-   - Ensure MySQL container is healthy before running migrations
-   - Check that database users have correct permissions
+   - Ensure PostgreSQL container is healthy before running migrations
+   - Check that database roles have correct permissions
 
 3. **Migration Failures**
 
@@ -252,7 +258,7 @@ docker-compose ps
 ### Prerequisites
 
 - Go 1.25.1 or later
-- MySQL 8.0 or later
+- PostgreSQL 17 or later
 - Make (optional, for using Makefile commands)
 
 ### Installation
@@ -268,12 +274,12 @@ docker-compose ps
 2. **Database setup**
 
    ```bash
-   # Create database
-   mysql -u root -p -e "CREATE DATABASE noter;"
+   # Create roles and databases (dev-only default passwords):
+   psql -U postgres -f db/init/01-create-databases-and-users.sql
 
-   # Copy environment file
-   cp .env.example .env.development
-   # Edit .env.development with your database credentials
+   # Copy development configuration
+   cp env.template development.env
+   # Edit development.env with your database credentials
 
    # Run migrations
    make migrate-up ENV=development
@@ -281,6 +287,9 @@ docker-compose ps
    # Seed development data (optional)
    make seed-up ENV=development
    ```
+
+   For a local PostgreSQL installation, use its port (usually `5432`) in the
+   database URLs. The template uses `5433` for the Docker database.
 
 3. **Generate TLS certificates** (for HTTPS)
 
@@ -309,7 +318,8 @@ make run-prod         # Run in production mode
 make build-prod       # Build production binary
 
 # Testing
-make test             # Run all tests
+make test             # Run all tests (models tests need a PostgreSQL test database)
+make test-short       # Run tests with the database-backed tests skipped
 make test-cover       # Run tests with coverage report
 make init-test-db     # Initialize test database
 make teardown-test-db # Clean up test database
@@ -350,9 +360,9 @@ make audit            # Run vet + staticcheck + govulncheck
 
 # Logs and debugging
 ./scripts/docker-run.sh logs-web    # View application logs
-./scripts/docker-run.sh logs-mysql  # View database logs
+./scripts/docker-run.sh logs-db     # View database logs
 ./scripts/docker-run.sh shell       # Access app container
-./scripts/docker-run.sh db-shell    # Access MySQL shell
+./scripts/docker-run.sh db-shell    # Access PostgreSQL shell
 
 # Cleanup
 ./scripts/docker-run.sh down        # Stop services
@@ -380,7 +390,7 @@ make audit            # Run vet + staticcheck + govulncheck
 │   ├── schema/          # Database schema management
 │   │   ├── migrations/  # Goose migration files
 │   │   └── seed/        # Database seed data
-│   └── init/            # MySQL initialization scripts
+│   └── init/            # PostgreSQL initialization scripts
 │       └── 01-create-databases-and-users.sql
 ├── ui/                  # User interface assets
 │   ├── html/           # HTML templates
@@ -401,14 +411,16 @@ make audit            # Run vet + staticcheck + govulncheck
 
 ## Configuration
 
-The application uses environment-specific configuration files:
+Create configuration files from `env.template` for Make or Docker to load:
 
-- `dev.env` - Development settings (Docker)
 - `env.template` - Template for creating environment files
-- `.env.development` - Development settings (manual setup)
-- `.env.production` - Production settings
-- `.env.test` - Test settings
-- `.env` - Fallback configuration
+- `dev.env`, `prod.env` - Docker settings
+- `development.env`, `production.env`, `test.env` - Make settings, selected with `ENV`
+- `.env` - Make fallback when the selected environment file is missing
+
+The app takes its defaults from the environment — `PORT`, `ENVIROMENT`,
+`DEBUG`, `TLS_CERT`, `TLS_KEY`, `DB_DSN` — and an explicitly passed flag wins
+over them. Goose uses `GOOSE_DRIVER=postgres` and `GOOSE_DBSTRING` for migrations.
 
 ### Docker Environment Variables
 
@@ -421,13 +433,13 @@ PORT=4000
 ENVIROMENT=development
 
 # Database Configuration
-GOOSE_DRIVER=mysql
-GOOSE_DBSTRING=noter_admin:admin@tcp(mysql:3306)/noter
+GOOSE_DRIVER=postgres
+GOOSE_DBSTRING=postgres://noter_admin:admin@postgres:5432/noter?sslmode=disable
 GOOSE_MIGRATION_DIR=./db/schema/migrations
 GOOSE_SEED_DIR=./db/schema/seed
-GOOSE_TABLE=noter.goose_migrations
-DB_DSN=noter_web:pass@tcp(mysql:3306)/noter
-TEST_DB_DSN=noter_test_web:test_pass@tcp(mysql:3306)/noter_test
+GOOSE_TABLE=goose_migrations
+DB_DSN=postgres://noter_web:pass@postgres:5432/noter?sslmode=disable
+TEST_DB_DSN=postgres://noter_test_web:test_pass@postgres:5432/noter_test?sslmode=disable
 
 # Application Settings
 DEBUG=true
@@ -436,7 +448,7 @@ TLS_CERT=./tls/cert.pem
 TLS_KEY=./tls/key.pem
 
 # Docker-specific configuration
-MYSQL_ROOT_PASSWORD=dev_root_password_change_me
+POSTGRES_PASSWORD=postgres_dev_change_me
 ```
 
 ### Manual Setup Environment Variables
@@ -444,8 +456,8 @@ MYSQL_ROOT_PASSWORD=dev_root_password_change_me
 For manual setup, use the template to create environment files:
 
 ```bash
-# Copy template
-cp env.template .env.development
+# Copy development configuration
+cp env.template development.env
 
 # Edit with your settings
 # Server Configuration
@@ -453,9 +465,9 @@ HOST=localhost
 PORT=4000
 ENVIROMENT=development
 
-# Database Configuration
-DB_DSN=noter_web:pass@tcp(localhost:3306)/noter
-TEST_DB_DSN=noter_test_web:test_pass@/test_noter
+# Database Configuration (local PostgreSQL default port 5432; use 5433 for the Docker-mapped port)
+DB_DSN=postgres://noter_web:pass@localhost:5432/noter?sslmode=disable
+TEST_DB_DSN=postgres://noter_test_web:test_pass@localhost:5432/noter_test?sslmode=disable
 
 # Application Settings
 DEBUG=true
@@ -466,7 +478,7 @@ TLS_KEY=./tls/key.pem
 ## Security Features
 
 - **CSRF Protection**: All forms protected against cross-site request forgery
-- **Secure Sessions**: HTTP-only, secure cookies with MySQL storage
+- **Secure Sessions**: HTTP-only, secure cookies with PostgreSQL storage
 - **Password Hashing**: bcrypt with appropriate cost factor
 - **HTTPS Only**: TLS encryption for all communications
 - **Input Validation**: Server-side validation for all user inputs
@@ -482,18 +494,19 @@ make test
 make test-cover
 
 # Docker testing
-./docker-run.sh test
+docker-compose --env-file dev.env up -d postgres
+docker-compose --env-file dev.env --profile tools run --rm tools go test ./...
 ```
 
 ### Test Database Setup
 
-```bash
-# Initialize test database
-make init-test-db
+The bootstrap script in `db/init/` creates the `noter_test` database and its
+owner. Model tests apply and roll back their own migrations and seeds, so
+start with an empty test schema. Configure `TEST_DB_DSN` for this database;
+the default uses `localhost:5433`.
 
-# Clean up after testing
-make teardown-test-db
-```
+`make init-test-db` and `make teardown-test-db` are available for manual schema
+inspection. Tear down a manually initialized schema before running the tests.
 
 ## Deployment
 

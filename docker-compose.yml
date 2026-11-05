@@ -1,21 +1,22 @@
 services:
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    container_name: noter-mysql
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17
+    container_name: noter-postgres
     restart: unless-stopped
     ports:
-      - "3307:3306" # Development port (to avoid conflicts with local MySQL)
+      - "5433:5432" # Development port (to avoid conflicts with a local PostgreSQL)
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-dev_root_password_change_me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev_change_me}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - pg_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - noter-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d noter"]
+      interval: 5s
+      timeout: 5s
       retries: 10
 
   # Database Migration Service
@@ -23,19 +24,19 @@ services:
     build: .
     container_name: noter-migrate
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
     environment:
-      GOOSE_DRIVER: ${GOOSE_DRIVER:-mysql}
-      GOOSE_DBSTRING: ${GOOSE_DBSTRING:-noter_admin:admin@tcp(mysql:3306)/noter}
+      GOOSE_DRIVER: ${GOOSE_DRIVER:-postgres}
+      GOOSE_DBSTRING: ${GOOSE_DBSTRING:-postgres://noter_admin:admin@postgres:5432/noter?sslmode=disable}
       GOOSE_MIGRATION_DIR: ${GOOSE_MIGRATION_DIR:-./db/schema/migrations}
       GOOSE_SEED_DIR: ${GOOSE_SEED_DIR:-./db/schema/seed}
-      GOOSE_TABLE: ${GOOSE_TABLE:-noter.goose_migrations}
+      GOOSE_TABLE: ${GOOSE_TABLE:-goose_migrations}
     networks:
       - noter-network
     command: >
       sh -c "
-        echo 'Waiting for MySQL to be ready...' &&
+        echo 'Waiting for PostgreSQL to be ready...' &&
         sleep 5 &&
         echo 'Running migrations...' &&
         goose -dir db/schema/migrations up &&
@@ -53,12 +54,12 @@ services:
     container_name: noter-web
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
     environment:
       HOST: "0.0.0.0"
       PORT: 4444
-      DB_DSN: ${DB_DSN:-noter_web:pass@tcp(mysql:3306)/noter}
+      DB_DSN: ${DB_DSN:-postgres://noter_web:pass@postgres:5432/noter?sslmode=disable}
       ENVIROMENT: ${ENVIROMENT:-development}
       DEBUG: ${DEBUG:-true}
       TLS_CERT: ${TLS_CERT:-./tls/cert.pem}
@@ -79,12 +80,11 @@ services:
         "-env",
         "${ENVIROMENT:-development}",
         "-dsn",
-        "${DB_DSN:-noter_web:pass@tcp(mysql:3306)/noter}",
+        "${DB_DSN:-postgres://noter_web:pass@postgres:5432/noter?sslmode=disable}",
         "-tls-cert",
         "${TLS_CERT:-./tls/cert.pem}",
         "-tls-key",
         "${TLS_KEY:-./tls/key.pem}",
-        "-debug",
       ]
 
   # Development tools service for running linting, testing, etc.
@@ -97,6 +97,8 @@ services:
     working_dir: /app
     networks:
       - noter-network
+    environment:
+      TEST_DB_DSN: ${TEST_DB_DSN:-postgres://noter_test_web:test_pass@postgres:5432/noter_test?sslmode=disable}
     profiles:
       - tools
     command: ["tail", "-f", "/dev/null"] # Keep container running
@@ -104,7 +106,7 @@ services:
 volumes:
   go_mod_cache:
     driver: local
-  mysql_data:
+  pg_data:
     driver: local
 
 networks:

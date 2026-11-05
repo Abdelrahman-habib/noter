@@ -1,20 +1,22 @@
+-- Create roles and databases (development defaults).
+-- Statements are guarded with \gexec so psql re-runs are safe.
+
+-- Create roles
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', 'noter_admin', 'admin')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'noter_admin') \gexec
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', 'noter_web', 'pass')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'noter_web') \gexec
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', 'noter_test_web', 'test_pass')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'noter_test_web') \gexec
+
 -- Create databases
-CREATE DATABASE IF NOT EXISTS `noter`;
-CREATE DATABASE IF NOT EXISTS `noter_test`;
+SELECT format('CREATE DATABASE %I OWNER %I', 'noter', 'noter_admin')
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'noter') \gexec
+SELECT format('CREATE DATABASE %I OWNER %I', 'noter_test', 'noter_test_web')
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'noter_test') \gexec
 
--- Create users with proper passwords
-CREATE USER IF NOT EXISTS 'noter_admin'@'%' IDENTIFIED BY 'admin';
-CREATE USER IF NOT EXISTS 'noter_web'@'%' IDENTIFIED BY 'pass';
-CREATE USER IF NOT EXISTS 'noter_test_web'@'%' IDENTIFIED BY 'test_pass';
-
--- Grant permissions to noter_admin (full privileges on noter database)
-GRANT ALL PRIVILEGES ON `noter`.* TO `noter_admin`@`%`;
-
--- Grant permissions to noter_web (limited privileges on noter database)
-GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON `noter`.* TO `noter_web`@`%`;
-
--- Grant permissions to noter_test_web (full privileges on noter_test database)
-GRANT ALL PRIVILEGES ON `noter_test`.* TO `noter_test_web`@`%`;
-
--- Flush privileges to ensure they take effect
-FLUSH PRIVILEGES;
+-- Grant noter_web access to tables and sequences created by noter_admin
+\connect noter
+GRANT USAGE ON SCHEMA public TO noter_web;
+ALTER DEFAULT PRIVILEGES FOR ROLE noter_admin IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO noter_web;
+ALTER DEFAULT PRIVILEGES FOR ROLE noter_admin IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO noter_web;
