@@ -12,6 +12,8 @@ const (
 	envDevelopment = "development"
 	envProduction  = "production"
 	envTest        = "test"
+
+	defaultDSN = "postgres://noter_web:pass@localhost:5433/noter?sslmode=disable"
 )
 
 type config struct {
@@ -38,9 +40,15 @@ func parseFlags() *config {
 	tlsCert := flag.String("tls-cert", env.Default("TLS_CERT", "./tls/cert.pem"), "Path to TLS certificate file")
 	tlsKey := flag.String("tls-key", env.Default("TLS_KEY", "./tls/key.pem"), "Path to TLS key file")
 
-	dsn := flag.String("dsn", env.Default("DB_DSN", "postgres://noter_web:pass@localhost:5433/noter?sslmode=disable"), "PostgreSQL connection string (libpq URL)")
+	dsn := flag.String("dsn", "", "PostgreSQL connection string (libpq URL)")
 
 	flag.Parse()
+
+	// Keep the DSN out of flag defaults so -h can't print a password
+	dsnValue := *dsn
+	if dsnValue == "" {
+		dsnValue = env.Default("DB_DSN", defaultDSN)
+	}
 
 	// validate env
 	if *envFlag != envDevelopment && *envFlag != envProduction && *envFlag != envTest {
@@ -56,6 +64,6 @@ func parseFlags() *config {
 		tlsCert: *tlsCert,
 		tlsKey:  *tlsKey,
 
-		dsn: *dsn,
+		dsn: dsnValue,
 	}
 }
