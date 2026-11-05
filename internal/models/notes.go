@@ -3,13 +3,14 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 // Define a Note type to hold the data for an individual note. Notice how
-// the fields of the struct correspond to the fields in our MySQL notes
+// the fields of the struct correspond to the fields in our PostgreSQL notes
 // table?
 type Note struct {
 	ID        string
@@ -52,7 +53,8 @@ type NoteModelInterface interface {
 // This will insert a new notes into the database.
 
 func (m *NoteModel) Insert(title string, content string, expires int, public bool, createdBy int) (string, error) {
-	stmt := `INSERT INTO notes (id, title, content, created, expires, public, created_by) VALUES (?, ?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), ?, ?)`
+	// Use 24-hour days so expiry doesn't shift with daylight saving time.
+	stmt := `INSERT INTO notes (id, title, content, created, expires, public, created_by) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + $4::int * INTERVAL '24 hours', $5, $6)`
 	id := uuid.New().String()
 
 	_, err := m.DB.Exec(stmt, id, title, content, expires, public, createdBy)
@@ -63,7 +65,7 @@ func (m *NoteModel) Insert(title string, content string, expires int, public boo
 }
 
 func (m *NoteModel) Update(id string, title string, content string, expires int, public bool, createdBy int) (string, error) {
-	stmt := `UPDATE notes SET title = ?, content = ?, expires = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), public = ?, created_by = ? WHERE id = ? AND created_by = ?`
+	stmt := `UPDATE notes SET title = $1, content = $2, expires = CURRENT_TIMESTAMP + $3::int * INTERVAL '24 hours', public = $4, created_by = $5 WHERE id = $6 AND created_by = $7`
 	_, err := m.DB.Exec(stmt, title, content, expires, public, createdBy, id, createdBy)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -79,7 +81,7 @@ func (m *NoteModel) Get(id string, createdBy *int) (NoteWithUsername, error) {
 	stmt := `SELECT notes.id, notes.title, notes.content, notes.created, notes.expires, notes.public, notes.created_by, users.name as username 
 	FROM notes 
 	JOIN users ON notes.created_by = users.id 
-	WHERE notes.expires > UTC_TIMESTAMP() AND notes.id = ?`
+	WHERE notes.expires > CURRENT_TIMESTAMP AND notes.id = $1`
 
 	var args []interface{}
 	args = append(args, id)
@@ -87,7 +89,7 @@ func (m *NoteModel) Get(id string, createdBy *int) (NoteWithUsername, error) {
 	// Access control: if no user ID provided, only show public notes
 	// if user ID provided, show public notes OR private notes created by that user
 	if createdBy != nil {
-		stmt += ` AND (notes.public = TRUE OR notes.created_by = ?)`
+		stmt += ` AND (notes.public = TRUE OR notes.created_by = $2)`
 		args = append(args, *createdBy)
 	} else {
 		stmt += ` AND notes.public = TRUE`
@@ -110,7 +112,7 @@ func (m *NoteModel) Latest() ([]NoteWithUsername, error) {
 	stmt := `SELECT notes.id, notes.title, notes.content, notes.created, notes.expires, notes.public, notes.created_by, users.name as username 
 	FROM notes
 	JOIN users ON notes.created_by = users.id
-	WHERE notes.expires > UTC_TIMESTAMP() AND notes.public = TRUE ORDER BY notes.id DESC LIMIT 10`
+	WHERE notes.expires > CURRENT_TIMESTAMP AND notes.public = TRUE ORDER BY notes.id DESC LIMIT 10`
 
 	rows, err := m.DB.Query(stmt)
 	if err != nil {
@@ -134,20 +136,20 @@ func (m *NoteModel) Latest() ([]NoteWithUsername, error) {
 }
 
 func (m *NoteModel) GetTotalPages(public *bool, createdBy *int) (int, error) {
-	stmt := `SELECT COUNT(*) FROM notes WHERE expires > UTC_TIMESTAMP()`
+	stmt := `SELECT COUNT(*) FROM notes WHERE expires > CURRENT_TIMESTAMP`
 
 	// Build dynamic query parameters
 	var args []interface{}
 
 	// Filter by created_by if specified (shows only notes by that user)
 	if createdBy != nil {
-		stmt += ` AND notes.created_by = ?`
+		stmt += ` AND notes.created_by = $` + strconv.Itoa(len(args)+1)
 		args = append(args, *createdBy)
 	}
 
 	// Filter by public/private if specified
 	if public != nil {
-		stmt += ` AND notes.public = ?`
+		stmt += ` AND notes.public = $` + strconv.Itoa(len(args)+1)
 		args = append(args, *public)
 	}
 
@@ -166,24 +168,24 @@ func (m *NoteModel) GetByPage(page int, limit int, public *bool, createdBy *int)
 	stmt := `SELECT notes.id, notes.title, notes.content, notes.created, notes.expires, notes.public, notes.created_by, users.name as username 
 	FROM notes
 	JOIN users ON notes.created_by = users.id
-	WHERE notes.expires > UTC_TIMESTAMP()`
+	WHERE notes.expires > CURRENT_TIMESTAMP`
 
 	// Build dynamic query parameters
 	var args []interface{}
 
 	// Filter by created_by if specified (shows only notes by that user)
 	if createdBy != nil {
-		stmt += ` AND notes.created_by = ?`
+		stmt += ` AND notes.created_by = $` + strconv.Itoa(len(args)+1)
 		args = append(args, *createdBy)
 	}
 
 	// Filter by public/private if specified
 	if public != nil {
-		stmt += ` AND notes.public = ?`
+		stmt += ` AND notes.public = $` + strconv.Itoa(len(args)+1)
 		args = append(args, *public)
 	}
 
-	stmt += ` ORDER BY notes.id DESC LIMIT ? OFFSET ?`
+	stmt += ` ORDER BY notes.id DESC LIMIT $` + strconv.Itoa(len(args)+1) + ` OFFSET $` + strconv.Itoa(len(args)+2)
 	args = append(args, limit, offset)
 
 	meta := PaginationMetaData{
@@ -205,6 +207,10 @@ func (m *NoteModel) GetByPage(page int, limit int, public *bool, createdBy *int)
 		notes = append(notes, s)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, meta, err
+	}
+
 	if len(notes) > originalLimit {
 		meta.HasNext = true
 		notes = notes[:originalLimit]
@@ -214,7 +220,7 @@ func (m *NoteModel) GetByPage(page int, limit int, public *bool, createdBy *int)
 }
 
 func (m *NoteModel) Delete(id string, createdBy *int) error {
-	stmt := `DELETE FROM notes WHERE id = ? AND created_by = ?`
+	stmt := `DELETE FROM notes WHERE id = $1 AND created_by = $2`
 	_, err := m.DB.Exec(stmt, id, *createdBy)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

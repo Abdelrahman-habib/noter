@@ -1,20 +1,14 @@
+-- Create roles (development passwords)
+CREATE ROLE noter_admin LOGIN PASSWORD 'admin';
+CREATE ROLE noter_web   LOGIN PASSWORD 'pass';
+CREATE ROLE noter_test_web LOGIN PASSWORD 'test_pass';
+
 -- Create databases
-CREATE DATABASE IF NOT EXISTS `noter`;
-CREATE DATABASE IF NOT EXISTS `noter_test`;
+CREATE DATABASE noter OWNER noter_admin;
+CREATE DATABASE noter_test OWNER noter_test_web;
 
--- Create users with proper passwords
-CREATE USER IF NOT EXISTS 'noter_admin'@'%' IDENTIFIED BY 'admin';
-CREATE USER IF NOT EXISTS 'noter_web'@'%' IDENTIFIED BY 'pass';
-CREATE USER IF NOT EXISTS 'noter_test_web'@'%' IDENTIFIED BY 'test_pass';
-
--- Grant permissions to noter_admin (full privileges on noter database)
-GRANT ALL PRIVILEGES ON `noter`.* TO `noter_admin`@`%`;
-
--- Grant permissions to noter_web (limited privileges on noter database)
-GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON `noter`.* TO `noter_web`@`%`;
-
--- Grant permissions to noter_test_web (full privileges on noter_test database)
-GRANT ALL PRIVILEGES ON `noter_test`.* TO `noter_test_web`@`%`;
-
--- Flush privileges to ensure they take effect
-FLUSH PRIVILEGES;
+-- Grant noter_web access to tables and sequences created by noter_admin
+\connect noter
+GRANT USAGE ON SCHEMA public TO noter_web;
+ALTER DEFAULT PRIVILEGES FOR ROLE noter_admin IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO noter_web;
+ALTER DEFAULT PRIVILEGES FOR ROLE noter_admin IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO noter_web;

@@ -2,16 +2,41 @@ package models
 
 import (
 	"database/sql"
+	"flag"
+	"os"
+	"sync"
 	"testing"
 
 	schema "github.com/Abdelrahman-habib/noter/db/schema"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
 
+const (
+	// database/sql uses "pgx"; goose uses "postgres".
+	sqlDriver      = "pgx"
+	defaultTestDSN = "postgres://noter_test_web:test_pass@localhost:5433/noter_test?sslmode=disable"
+)
+
+type testDBConfig struct {
+	dbDialect string
+	testDSN   string
+}
+
+var (
+	// Register flags before the test runner parses them.
+	dbDialect = flag.String("db-dialect", "postgres", "Goose migration dialect (eg: postgres)")
+	testDSN   = flag.String("test-dsn", envDefault("TEST_DB_DSN", defaultTestDSN), "PostgreSQL test database connection string")
+
+	configOnce     sync.Once
+	configInstance *testDBConfig
+)
+
 func newTestDB(t *testing.T) *sql.DB {
-	config := parseFlags()
+	config := getTestDBConfig()
+
 	// Establish a sql.DB connection pool for our test database
-	db, err := sql.Open(config.dbDialect, config.testDSN)
+	db, err := sql.Open(sqlDriver, config.testDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,15 +69,33 @@ func newTestDB(t *testing.T) *sql.DB {
 
 		// Reset seed data (no versioning for seeds)
 		if err := goose.Reset(db, "seed", goose.WithNoVersioning()); err != nil {
-			t.Logf("warning: failed to reset seeds: %v", err)
+			t.Errorf("failed to reset seeds: %v", err)
 		}
 
 		// Reset migrations
 		if err := goose.Reset(db, "migrations", goose.WithNoVersioning()); err != nil {
-			t.Logf("warning: failed to reset migrations: %v", err)
+			t.Errorf("failed to reset migrations: %v", err)
 		}
 	})
 
 	// Return the database connection pool.
 	return db
+}
+
+// envDefault uses the environment variable as the flag default
+func envDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func getTestDBConfig() *testDBConfig {
+	configOnce.Do(func() {
+		configInstance = &testDBConfig{
+			dbDialect: *dbDialect,
+			testDSN:   *testDSN,
+		}
+	})
+	return configInstance
 }

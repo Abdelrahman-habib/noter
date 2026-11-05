@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"strings"
 )
 
 const (
@@ -12,6 +11,14 @@ const (
 	envProduction  = "production"
 	envTest        = "test"
 )
+
+// envDefault uses the environment variable as the flag default
+func envDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
 
 type config struct {
 	// app
@@ -30,14 +37,14 @@ type config struct {
 }
 
 func parseFlags() *config {
-	addr := flag.String("addr", ":4000", "HTTP network address")
-	debugMode := flag.Bool("debug", false, "enable debug mode")
-	env := flag.String("env", "development", "Environment (development, production, test)")
+	addr := flag.String("addr", ":"+envDefault("PORT", "4000"), "HTTP network address")
+	debugMode := flag.Bool("debug", os.Getenv("DEBUG") == "true", "enable debug mode")
+	env := flag.String("env", envDefault("ENVIROMENT", "development"), "Environment (development, production, test)")
 
-	tlsCert := flag.String("tls-cert", "./tls/cert.pem", "Path to TLS certificate file")
-	tlsKey := flag.String("tls-key", "./tls/key.pem", "Path to TLS key file")
+	tlsCert := flag.String("tls-cert", envDefault("TLS_CERT", "./tls/cert.pem"), "Path to TLS certificate file")
+	tlsKey := flag.String("tls-key", envDefault("TLS_KEY", "./tls/key.pem"), "Path to TLS key file")
 
-	dsn := flag.String("dsn", "noter_web:pass@/noter?parseTime=true", "MySQL data source name")
+	dsn := flag.String("dsn", envDefault("DB_DSN", "postgres://noter_web:pass@localhost:5433/noter?sslmode=disable"), "PostgreSQL connection string (libpq URL)")
 
 	flag.Parse()
 
@@ -45,12 +52,6 @@ func parseFlags() *config {
 	if *env != envDevelopment && *env != envProduction && *env != envTest {
 		log.Fatal("invalid environment")
 		os.Exit(1)
-	}
-
-	// Get DSN from environment variable if available, otherwise use flag
-	dsnValue := *dsn
-	if envDSN := os.Getenv("DB_DSN"); envDSN != "" {
-		dsnValue = envDSN
 	}
 
 	return &config{
@@ -61,22 +62,6 @@ func parseFlags() *config {
 		tlsCert: *tlsCert,
 		tlsKey:  *tlsKey,
 
-		dsn: dsnValue,
+		dsn: *dsn,
 	}
-}
-
-// buildDSN safely adds required parameters to the DSN
-func buildDSN(dsn string) (string, error) {
-	// Check if DSN already has query parameters
-	separator := "?"
-	if strings.Contains(dsn, "?") {
-		separator = "&"
-	}
-
-	// Add parseTime parameter if not already present
-	if !strings.Contains(dsn, "parseTime=") {
-		dsn += separator + "parseTime=true"
-	}
-
-	return dsn, nil
 }

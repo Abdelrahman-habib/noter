@@ -7,11 +7,11 @@ import (
 
 	"github.com/Abdelrahman-habib/noter/internal/logger"
 	"github.com/Abdelrahman-habib/noter/internal/models"
-	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -24,21 +24,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Build the DSN with safe parameter handling
-	dsn, err := buildDSN(config.dsn)
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
-	db, err := openDB(dsn)
+	db, err := openDB(config.dsn)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
 	}
 
 	sessionManager := scs.New()
-	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Store = postgresstore.New(db)
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.Secure = true
 
@@ -61,7 +54,7 @@ func main() {
 }
 
 func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}

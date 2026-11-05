@@ -24,7 +24,7 @@ show_help() {
     echo "  logs-web    Show logs from web service only"
     echo "  logs-db     Show logs from database service only"
     echo "  shell       Open shell in web container"
-    echo "  db-shell    Open MySQL shell"
+    echo "  db-shell    Open PostgreSQL shell"
     echo "  down        Stop all services"
     echo "  clean       Remove all containers, volumes, and images"
     echo "  help        Show this help message"
@@ -36,7 +36,7 @@ show_help() {
     echo "  $0 migrate-prod     # Run migrations (prod)"
     echo "  $0 migrate-down     # Rollback migrations (dev)"
     echo "  $0 logs-web         # View web application logs"
-    echo "  $0 db-shell         # Connect to MySQL database"
+    echo "  $0 db-shell         # Connect to PostgreSQL database"
 }
 
 case "$1" in
@@ -44,7 +44,7 @@ case "$1" in
         echo "Starting Noter in development mode..."
         docker-compose --env-file dev.env up -d
         echo "Development services started! Access the app at https://localhost:4444"
-        echo "MySQL is available on localhost:3307"
+        echo "PostgreSQL is available on localhost:5433"
         ;;
     "prod")
         echo "Starting Noter in production mode..."
@@ -91,14 +91,14 @@ case "$1" in
         docker-compose logs -f web
         ;;
     "logs-db")
-        docker-compose logs -f mysql
+        docker-compose logs -f postgres
         ;;
     "shell")
         docker-compose exec web sh
         ;;
     "db-shell")
-        echo "Connecting to MySQL database..."
-        docker-compose exec mysql mysql -u root -p${MYSQL_ROOT_PASSWORD:-dev_root_password_change_me}
+        echo "Connecting to PostgreSQL database..."
+        docker-compose exec postgres psql -U postgres
         ;;
     "down")
         echo "Stopping all services..."
