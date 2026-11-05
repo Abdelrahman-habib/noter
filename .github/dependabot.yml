@@ -2,6 +2,8 @@ version: 2
 
 updates:
   # Go modules (go.mod / go.sum)
+  # go.tool.mod (staticcheck, govulncheck) is not tracked by Dependabot;
+  # bump manually with make upgrade-tool.
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:

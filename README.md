@@ -334,6 +334,7 @@ make seed-down        # Remove seed data
 # Code Quality
 make lint             # Run go vet
 make audit            # Run vet + staticcheck + govulncheck
+make upgrade-tool     # Bump a dev tool pinned in go.tool.mod
 ```
 
 ### Docker Development Commands

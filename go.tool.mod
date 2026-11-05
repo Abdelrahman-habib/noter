@@ -1,3 +1,6 @@
+// Dev tools run via -modfile=go.tool.mod (see make audit).
+// Dependabot only tracks go.mod files, so bump these with:
+//   make upgrade-tool tool=<tool-package>
 module github.com/Abdelrahman-habib/noter
 
 go 1.25.0
