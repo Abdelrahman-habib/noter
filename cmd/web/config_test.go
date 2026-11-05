@@ -21,9 +21,18 @@ func TestParseFlagsDsnPrecedence(t *testing.T) {
 		{"default without env", []string{}, "", defaultDSN},
 	}
 
+	// Pin development so ambient ENVIROMENT can't trip the production check.
+	t.Setenv("ENVIROMENT", "development")
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("DB_DSN", tt.envDSN)
+
+			// parseFlags rewrites package globals; restore them for later tests.
+			oldArgs, oldFlags := os.Args, flag.CommandLine
+			t.Cleanup(func() {
+				os.Args, flag.CommandLine = oldArgs, oldFlags
+			})
 
 			flag.CommandLine = flag.NewFlagSet("noter", flag.ContinueOnError)
 			flag.CommandLine.SetOutput(io.Discard)

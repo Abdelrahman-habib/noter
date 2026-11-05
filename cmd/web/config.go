@@ -56,6 +56,11 @@ func parseFlags() *config {
 		os.Exit(1)
 	}
 
+	// Fail fast if production is booted without an explicit DSN
+	if *envFlag == envProduction && *dsn == "" && os.Getenv("DB_DSN") == "" {
+		log.Fatal("production requires an explicit DSN: set DB_DSN or pass -dsn")
+	}
+
 	return &config{
 		addr:      *addr,
 		debugMode: *debugMode,
