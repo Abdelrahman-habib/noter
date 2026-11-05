@@ -66,12 +66,18 @@ func (m *NoteModel) Insert(title string, content string, expires int, public boo
 
 func (m *NoteModel) Update(id string, title string, content string, expires int, public bool, createdBy int) (string, error) {
 	stmt := `UPDATE notes SET title = $1, content = $2, expires = CURRENT_TIMESTAMP + $3::int * INTERVAL '24 hours', public = $4, created_by = $5 WHERE id = $6 AND created_by = $7`
-	_, err := m.DB.Exec(stmt, title, content, expires, public, createdBy, id, createdBy)
+	res, err := m.DB.Exec(stmt, title, content, expires, public, createdBy, id, createdBy)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", ErrNoRecord
 		}
 		return "", err
+	}
+
+	// Exec never returns ErrNoRows; zero affected rows mean nothing matched
+	// the WHERE clause, so the note doesn't exist or isn't owned by the user.
+	if n, _ := res.RowsAffected(); n == 0 {
+		return "", ErrNoRecord
 	}
 	return id, nil
 }
@@ -112,7 +118,7 @@ func (m *NoteModel) Latest() ([]NoteWithUsername, error) {
 	stmt := `SELECT notes.id, notes.title, notes.content, notes.created, notes.expires, notes.public, notes.created_by, users.name as username 
 	FROM notes
 	JOIN users ON notes.created_by = users.id
-	WHERE notes.expires > CURRENT_TIMESTAMP AND notes.public = TRUE ORDER BY notes.id DESC LIMIT 10`
+	WHERE notes.expires > CURRENT_TIMESTAMP AND notes.public = TRUE ORDER BY notes.created DESC, notes.id DESC LIMIT 10`
 
 	rows, err := m.DB.Query(stmt)
 	if err != nil {
@@ -185,7 +191,7 @@ func (m *NoteModel) GetByPage(page int, limit int, public *bool, createdBy *int)
 		args = append(args, *public)
 	}
 
-	stmt += ` ORDER BY notes.id DESC LIMIT $` + strconv.Itoa(len(args)+1) + ` OFFSET $` + strconv.Itoa(len(args)+2)
+	stmt += ` ORDER BY notes.created DESC, notes.id DESC LIMIT $` + strconv.Itoa(len(args)+1) + ` OFFSET $` + strconv.Itoa(len(args)+2)
 	args = append(args, limit, offset)
 
 	meta := PaginationMetaData{

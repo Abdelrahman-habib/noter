@@ -112,17 +112,24 @@ func TestNoteModelUpdateAndDelete(t *testing.T) {
 		db := newTestDB(t)
 		m := NoteModel{db}
 
+		var before, after time.Time
+		assert.NilError(t, m.DB.QueryRow(`SELECT current_timestamp`).Scan(&before))
+
 		id, err := m.Update(seedNoteIDs[0], "Updated title", "Updated content", 30, true, 1)
 		assert.NilError(t, err)
 		assert.Equal(t, id, seedNoteIDs[0])
+
+		assert.NilError(t, m.DB.QueryRow(`SELECT current_timestamp`).Scan(&after))
 
 		note, err := m.Get(id, nil)
 		assert.NilError(t, err)
 		assert.Equal(t, note.Title, "Updated title")
 		assert.Equal(t, note.Content, "Updated content")
 
-		// Expiry is measured from the update time, not the creation time.
-		assert.Equal(t, note.Expires.Sub(note.Created) >= 720*time.Hour, true)
+		// Expiry is measured from the update time, not the creation time:
+		// every timestamp comes from the same server clock, so a creation-based
+		// expiry would land seconds before the lower bound.
+		assert.Equal(t, !note.Expires.Before(before.Add(30*24*time.Hour)) && !note.Expires.After(after.Add(30*24*time.Hour)), true)
 
 		err = m.Delete(id, intPtr(1))
 		assert.NilError(t, err)
@@ -135,13 +142,10 @@ func TestNoteModelUpdateAndDelete(t *testing.T) {
 		db := newTestDB(t)
 		m := NoteModel{db}
 
-		// Updates by a non-owner succeed without changing any rows.
+		// Non-owner updates match no rows: the model reports ErrNoRecord so
+		// handlers can respond with 404.
 		_, err := m.Update(seedNoteIDs[0], "Hijacked title", "Hijacked content", 30, true, 999)
-		assert.NilError(t, err)
-
-		note, err := m.Get(seedNoteIDs[0], nil)
-		assert.NilError(t, err)
-		assert.Equal(t, note.Title, "[seed] An old silent pond")
+		assert.Equal(t, errors.Is(err, ErrNoRecord), true)
 	})
 }
 
@@ -254,11 +258,13 @@ func TestNoteModelFiltersAndPagination(t *testing.T) {
 	t.Run("HasNext is reported when more rows exist", func(t *testing.T) {
 		db := newTestDB(t)
 		m := NoteModel{db}
-		addNote(t, &m)
+		id := addNote(t, &m)
 
 		notes, meta, err := m.GetByPage(1, 1, nil, nil)
 		assert.NilError(t, err)
 		assert.Equal(t, len(notes), 1)
+		// Newest-created note first: ordering is by created, not the random UUID id.
+		assert.Equal(t, notes[0].ID, id)
 		assert.Equal(t, meta.HasNext, true)
 
 		notes, meta, err = m.GetByPage(2, 1, nil, nil)
