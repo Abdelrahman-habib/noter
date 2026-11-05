@@ -2,7 +2,7 @@
 ENV ?= development
 ENV_FILE = ./$(ENV).env
 
-.PHONY: run run-dev run-prod run-test run-all migrate-up migrate-down migrate-reset migrate-status seed-up seed-down seed-reset build build-dev build-prod build-test build-all clean test test-short test-cover lint audit migrate-test-up migrate-test-down migrate-test-reset seed-test-up seed-test-down seed-test-reset init-test-db teardown-test-db
+.PHONY: run run-dev run-prod run-test run-all migrate-up migrate-down migrate-reset migrate-status seed-up seed-down seed-reset build build-dev build-prod build-test build-all clean test test-short test-cover lint audit upgrade-tool migrate-test-up migrate-test-down migrate-test-reset seed-test-up seed-test-down seed-test-reset init-test-db teardown-test-db
 
 # Check if environment-specific .env file exists, fallback to .env
 ifneq (,$(wildcard $(ENV_FILE)))
@@ -135,3 +135,11 @@ add-tool:
 	fi
 	@echo "Adding tool: ${tool}"
 	go get -tool -modfile=go.tool.mod ${tool}
+
+upgrade-tool:
+	@if [ -z "${tool}" ]; then \
+		echo "Tool is required example: make upgrade-tool tool=golang.org/x/vuln/cmd/govulncheck"; \
+		exit 1; \
+	fi
+	@echo "Upgrading tool: ${tool}"
+	go get -tool -modfile=go.tool.mod ${tool}@latest
