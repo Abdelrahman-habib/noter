@@ -2,7 +2,7 @@
     {{if .Notes}}
     <div class="notes-grid">
         {{range .Notes}}
-        <a href='/note/view/{{.ID}}' class="note-card">
+        <a href='/note/view/{{.ID}}' class="note-card" style="view-transition-name: note-{{.ID}}">
             <div class="note-card-content">
                 <p class="note-preview">{{truncate .Content 150}}</p>
             </div>
