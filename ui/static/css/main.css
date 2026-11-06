@@ -1054,3 +1054,74 @@ button.button.button-secondary {
 .mb-0 {
   margin-bottom: 0;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  nav {
+    view-transition-name: site-nav;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(note),
+  ::view-transition-new(note) {
+    mix-blend-mode: normal;
+  }
+
+  /* The previous page holds fully opaque underneath the arriving page's
+     fade-in — no mid-transition transparency, so no backdrop is needed. */
+  ::view-transition-old(root) {
+    animation: none;
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-fade-in 300ms ease both;
+  }
+
+  ::view-transition-new(note) {
+    animation: vt-slide-up 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  ::view-transition-old(note) {
+    animation: vt-slide-down 600ms cubic-bezier(0.55, 0, 0.75, 0) both;
+  }
+
+  ::view-transition-group(note) {
+    z-index: 1;
+  }
+
+  ::view-transition-old(note-actions) {
+    animation: vt-fade-out 150ms ease-out both;
+  }
+
+  ::view-transition-new(note-actions) {
+    animation: vt-fade-in 250ms ease-out 550ms both;
+  }
+}
+
+@keyframes vt-slide-up {
+  from {
+    translate: 0 100vh;
+  }
+}
+
+@keyframes vt-slide-down {
+  to {
+    translate: 0 100vh;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}

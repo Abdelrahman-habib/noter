@@ -1,10 +1,10 @@
-{{define "title"}}Note #{{.Note.ID}}{{end}}
+{{define "title"}}{{.Note.Title}}{{end}}
 
 {{define "main"}}
     {{with  .Note}}
-    <div class='note'>
+    <div class='note' style="view-transition-name: note">
         <div class='metadata'>
-            <strong> 
+            <strong>
                 <abbr title="{{if .Public}}Public{{else}}Private{{end}}" class="note-visibility">{{if .Public}}🌐{{else}}🔒{{end}}</abbr> {{.Title}}
             </strong>   
             <span class="note-id" title="{{.Username}}">Created by: <a href="/user/{{.CreatedBy}}">{{truncate .Username 25}}</a></span>
@@ -17,7 +17,7 @@
     </div>
     {{end}}
     {{if .IsUserNote}}
-    <div class="note-actions">
+    <div class="note-actions" style="view-transition-name: note-actions">
         <a class="button" href="/note/edit/{{.Note.ID}}">Edit</a>
         <button class="button dialog-open-button">Delete</button>
     </div>

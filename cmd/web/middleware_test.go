@@ -19,7 +19,7 @@ func TestCommonHeaders(t *testing.T) {
 	commonHeadersMiddleware(next).ServeHTTP(rr, r)
 
 	rs := rr.Result()
-	assert.Equal(t, rs.Header.Get("Content-Security-Policy"), "default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com")
+	assert.Equal(t, rs.Header.Get("Content-Security-Policy"), "default-src 'self'; style-src 'self' fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src fonts.gstatic.com")
 	assert.Equal(t, rs.Header.Get("Referrer-Policy"), "origin-when-cross-origin")
 	assert.Equal(t, rs.Header.Get("X-Content-Type-Options"), "nosniff")
 	assert.Equal(t, rs.Header.Get("X-Frame-Options"), "deny")
