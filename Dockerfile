@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.25.1-alpine AS builder
+FROM golang:1.27.3-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata make bash curl
@@ -26,7 +26,7 @@ COPY . .
 RUN go build -o bin/noter ./cmd/web
 
 # Final stage
-FROM golang:1.25.1-alpine
+FROM golang:1.27.3-alpine
 
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates bash curl
