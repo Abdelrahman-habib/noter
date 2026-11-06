@@ -490,13 +490,6 @@ func (app *application) userProfile(w http.ResponseWriter, r *http.Request) {
 	currentUserID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
 	isOwnProfile := currentUserID == id
 
-	var showPublic *bool
-	// If it's not their own profile, only show public notes
-	if !isOwnProfile {
-		trueBool := true
-		showPublic = &trueBool
-	}
-
 	// Fetch notes for the user
 	// We'll use a default page of 1, if no page is specified in the query string
 	page := r.URL.Query().Get("page")
@@ -507,6 +500,24 @@ func (app *application) userProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
+	}
+
+	// Parse 'show' query param into the visibility filter. Only the
+	// profile owner can browse private notes; a visitor gets only public
+	// notes regardless of what 'show' says.
+	var showPublic *bool
+	if isOwnProfile {
+		switch r.URL.Query().Get("show") {
+		case "public":
+			trueBool := true
+			showPublic = &trueBool
+		case "private":
+			falseBool := false
+			showPublic = &falseBool
+		} // else leave it nil (show=all or absent)
+	} else {
+		trueBool := true
+		showPublic = &trueBool
 	}
 
 	notes, metaData, err := app.notes.GetByPage(pageInt, 10, showPublic, &id)
@@ -523,20 +534,8 @@ func (app *application) userProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Only pass NotesFilters if it's their own profile
 	if isOwnProfile {
-		// Parse 'show' query param to set active filter state
-		show := r.URL.Query().Get("show")
-		var filterShowPublic *bool
-		switch show {
-		case "public":
-			trueBool := true
-			filterShowPublic = &trueBool
-		case "private":
-			falseBool := false
-			filterShowPublic = &falseBool
-		}
-
 		data.NotesFilters = &models.NotesFilters{
-			ShowPublic: filterShowPublic,
+			ShowPublic: showPublic,
 		}
 	}
 
